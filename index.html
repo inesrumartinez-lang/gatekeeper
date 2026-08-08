@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<!-- Metadatos para que iOS la trate como app a pantalla completa -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gatekeeper">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<title>Gatekeeper</title>
+<style>
+/* ============================================================
+   GATEKEEPER — Estilos
+   Diseño mobile-first, oscuro por defecto, botones grandes.
+   ============================================================ */
+:root{
+  --fondo:#0d1117;        /* fondo general */
+  --card:#161b22;         /* tarjetas */
+  --panel:#1c2129;        /* paneles internos */
+  --borde:#30363d;
+  --texto:#e6edf3;
+  --gris:#8b949e;
+  /* Colores de estado */
+  --verde:#3fb950;        /* prioritario */
+  --verde-osc:#1d5c2b;
+  --azul:#58a6ff;         /* activo */
+  --azul-osc:#1f4a7a;
+  --grisestado:#6e7681;   /* bloqueado */
+  --ambar:#d29922;        /* pausado / avisos */
+  --rojo:#f85149;         /* peligro */
+  --rojo-osc:#67060c;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--fondo);color:var(--texto);
+  font-size:16px;line-height:1.5;
+  padding-top:max(12px,env(safe-area-inset-top));
+  /* Hueco inferior para la barra de navegación fija */
+  padding-bottom:calc(86px + env(safe-area-inset-bottom));
+  min-height:100vh;
+}
+.cont{max-width:520px;margin:0 auto;padding:0 14px}
+
+/* ---------- Cabecera ---------- */
+header{display:flex;align-items:center;gap:10px;padding:6px 0 12px}
+header img{width:34px;height:34px;border-radius:9px}
+header h1{font-size:24px;font-weight:800;letter-spacing:-.02em}
+header h1 span{color:var(--verde)}
+
+/* ---------- Tarjetas ---------- */
+.crd{background:var(--card);border:1px solid var(--borde);border-radius:16px;padding:16px;margin-bottom:14px}
+.crd h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);font-weight:700;margin-bottom:12px}
+
+/* ---------- Banner rojo persistente ---------- */
+.banner-rojo{
+  background:linear-gradient(135deg,#3d0c0c,#67060c);
+  border:1px solid var(--rojo);border-radius:14px;
+  padding:14px 16px;margin-bottom:14px;
+  color:#ffd8d6;font-weight:600;font-size:15px;
+  display:flex;gap:10px;align-items:center;
+}
+.banner-rojo .ico{font-size:22px;flex:none}
+
+/* ---------- Botones (grandes, para usar con el pulgar) ---------- */
+.btn{
+  display:block;width:100%;border:none;border-radius:14px;
+  padding:16px;font-size:17px;font-weight:700;font-family:inherit;
+  cursor:pointer;color:#fff;background:var(--panel);
+  min-height:54px;
+}
+.btn:active{transform:scale(.98);opacity:.9}
+.btn-verde{background:var(--verde);color:#04260d}
+.btn-azul{background:var(--azul);color:#08243f}
+.btn-rojo{background:var(--rojo);color:#2d0000}
+.btn-borde{background:transparent;border:1.5px solid var(--borde);color:var(--texto)}
+.btn-chico{padding:10px 14px;font-size:14px;min-height:44px;width:auto;display:inline-block;border-radius:11px}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.fila-btns{display:flex;gap:10px}
+.fila-btns .btn{flex:1}
+
+/* ---------- Formularios ---------- */
+label.campo{display:block;margin-bottom:14px;font-size:13.5px;font-weight:600;color:var(--gris)}
+label.campo .et{display:block;margin-bottom:6px}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;background:var(--panel);border:1.5px solid var(--borde);
+  border-radius:12px;padding:14px;font-size:16px;color:var(--texto);
+  font-family:inherit;appearance:none;-webkit-appearance:none;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--azul)}
+.nota{font-size:12.5px;color:var(--gris);margin-top:5px;font-weight:400}
+.nota-aviso{color:var(--ambar)}
+input[type=range]{width:100%;accent-color:var(--azul);height:34px}
+
+/* ---------- Etiquetas de estado ---------- */
+.chip{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;border-radius:999px;padding:3px 10px}
+.chip-prioritario{background:var(--verde-osc);color:var(--verde)}
+.chip-activo{background:var(--azul-osc);color:var(--azul)}
+.chip-bloqueado{background:#2a2f36;color:var(--grisestado)}
+.chip-pausado{background:#3c2e08;color:var(--ambar)}
+.chip-terminado{background:#21262d;color:var(--gris)}
+
+/* ---------- Tarjeta de proyecto ---------- */
+.proy{background:var(--card);border:1px solid var(--borde);border-radius:16px;
+  padding:15px;margin-bottom:12px;border-left-width:5px}
+.proy-prioritario{border-left-color:var(--verde)}
+.proy-activo{border-left-color:var(--azul)}
+.proy-bloqueado{border-left-color:var(--grisestado);opacity:.72}
+.proy-pausado{border-left-color:var(--ambar)}
+.proy-terminado{border-left-color:var(--borde);opacity:.55}
+.proy-terminado .proy-nombre{text-decoration:line-through}
+.proy-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.proy-nombre{font-size:17px;font-weight:800;word-break:break-word}
+.proy-tipo{font-size:12.5px;color:var(--gris);margin-top:1px}
+.proy-avance{margin-top:10px;font-size:13px;color:var(--gris)}
+.proy-acciones{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+
+/* ---------- Barras de progreso ---------- */
+.barra{background:var(--panel);border-radius:999px;height:12px;overflow:hidden;margin-top:6px}
+.barra > div{height:100%;border-radius:999px;transition:width .3s}
+.barra-verde > div{background:var(--verde)}
+.barra-azul > div{background:var(--azul)}
+.barra-gris > div{background:var(--grisestado)}
+.barra-ambar > div{background:var(--ambar)}
+
+/* Barras del gráfico semanal */
+.gsem-fila{margin-bottom:10px}
+.gsem-cab{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:3px}
+.gsem-cab b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%}
+.gsem-cab span{color:var(--gris);font-variant-numeric:tabular-nums}
+
+/* ---------- Peajes en dashboard ---------- */
+.peaje-fila{padding:10px 0;border-bottom:1px dashed var(--borde)}
+.peaje-fila:last-child{border-bottom:none;padding-bottom:0}
+.peaje-cab{display:flex;justify-content:space-between;font-size:14px;gap:8px}
+.peaje-cab b{font-weight:700}
+.peaje-cab span{color:var(--gris);font-variant-numeric:tabular-nums;flex:none}
+.peaje-det{font-size:12px;color:var(--gris);margin-top:4px}
+
+/* ---------- Racha ---------- */
+.racha{display:flex;align-items:center;gap:14px}
+.racha .num{font-size:44px;font-weight:900;color:var(--verde);line-height:1;font-variant-numeric:tabular-nums}
+.racha .txt{font-size:14px;color:var(--gris)}
+
+/* ---------- Cronómetro ---------- */
+.crono-tiempo{font-size:52px;font-weight:900;text-align:center;
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;margin:14px 0}
+.crono-activo .crono-tiempo{color:var(--verde)}
+.crono-proy{text-align:center;font-size:14px;color:var(--gris);margin-bottom:12px}
+
+/* ---------- Sesiones recientes ---------- */
+.ses-fila{display:flex;justify-content:space-between;gap:10px;padding:9px 0;
+  border-bottom:1px dashed var(--borde);font-size:14px}
+.ses-fila:last-child{border-bottom:none}
+.ses-fila b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ses-fila .der{color:var(--gris);flex:none;font-variant-numeric:tabular-nums}
+
+/* ---------- Navegación inferior ---------- */
+nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  background:rgba(13,17,23,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--borde);
+  padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  display:flex;
+}
+nav button{
+  flex:1;background:none;border:none;color:var(--gris);
+  font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;
+  border-radius:12px;min-height:56px;
+}
+nav button .ni{font-size:23px;line-height:1}
+nav button.on{color:var(--texto);background:var(--panel)}
+
+/* ---------- Vistas (pestañas) ---------- */
+.vista{display:none}
+.vista.visible{display:block}
+
+/* ---------- FAB nuevo proyecto ---------- */
+.fab{
+  position:fixed;right:18px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:40;
+  width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--verde);color:#04260d;font-size:32px;font-weight:800;
+  box-shadow:0 6px 18px rgba(63,185,80,.35);
+}
+.fab:active{transform:scale(.94)}
+
+/* ---------- Modales (hoja inferior) ---------- */
+.velo{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;
+  display:none;align-items:flex-end;justify-content:center}
+.velo.visible{display:flex}
+/* La confirmación siempre por encima de cualquier otra hoja abierta */
+#velo-confirmar{z-index:150}
+.hoja{
+  background:var(--card);border:1px solid var(--borde);border-bottom:none;
+  border-radius:22px 22px 0 0;width:100%;max-width:520px;
+  max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:20px 18px calc(24px + env(safe-area-inset-bottom));
+  animation:subir .22s ease-out;
+}
+@keyframes subir{from{transform:translateY(40px);opacity:.5}to{transform:translateY(0);opacity:1}}
+.hoja h3{font-size:19px;font-weight:800;margin-bottom:14px}
+.hoja .msj{font-size:15px;color:var(--texto);margin-bottom:18px;white-space:pre-line}
+
+/* ---------- Avisos flotantes (toast) ---------- */
+#toast{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(100px + env(safe-area-inset-bottom));z-index:200;
+  background:#21262d;border:1px solid var(--borde);color:var(--texto);
+  padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;
+  max-width:88%;text-align:center;display:none;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+}
+
+/* ---------- Pantalla de error de datos ---------- */
+#pantalla-error{display:none}
+#pantalla-error.visible{display:block}
+#app-normal.oculto{display:none}
+
+.vacio{color:var(--gris);font-size:14px;text-align:center;padding:14px 0}
+.sep{border:none;border-top:1px dashed var(--borde);margin:14px 0}
+</style>
+</head>
+<body>
+<div class="cont">
+
+  <!-- ============ PANTALLA DE ERROR DE DATOS ============ -->
+  <!-- Solo se muestra si los datos guardados no se pueden leer -->
+  <div id="pantalla-error">
+    <header><h1>Gatekeeper<span>.</span></h1></header>
+    <div class="crd">
+      <h2>⚠️ Problema con tus datos</h2>
+      <p style="font-size:15px;margin-bottom:14px">
+        No he podido leer los datos guardados en este dispositivo. Puede que se hayan
+        dañado o que el navegador los haya borrado. Tranquilidad: aquí abajo puedes
+        rescatar lo que quede, importar una copia de seguridad, o empezar de cero.
+      </p>
+      <button class="btn btn-borde" id="btn-rescatar" style="margin-bottom:10px">⬇️ Descargar lo que se pueda rescatar</button>
+      <hr class="sep">
+      <label class="campo"><span class="et">Pega aquí tu copia de seguridad (JSON)</span>
+        <textarea id="txt-rescate" rows="4" placeholder='{"proyectos":[...]}'></textarea>
+      </label>
+      <button class="btn btn-azul" id="btn-importar-rescate" style="margin-bottom:10px">📥 Importar copia</button>
+      <button class="btn btn-rojo" id="btn-cero">🗑️ Empezar de cero</button>
+    </div>
+  </div>
+
+  <!-- ============ APP NORMAL ============ -->
+  <div id="app-normal">
+
+    <header>
+      <img src="icon-192.png" alt="">
+      <h1>Gatekeeper<span>.</span></h1>
+    </header>
+
+    <!-- ============ VISTA: PANEL (dashboard) ============ -->
+    <section class="vista visible" id="vista-panel">
+      <div id="zona-banner"></div>
+
+      <div class="crd racha-crd">
+        <h2>🔥 Racha en prioritarios</h2>
+        <div class="racha">
+          <div class="num" id="racha-num">0</div>
+          <div class="txt" id="racha-txt">días consecutivos trabajando en proyectos prioritarios</div>
+        </div>
+      </div>
+
+      <div class="crd">
+        <h2>📊 Horas de esta semana</h2>
+        <div id="grafico-semana"></div>
+      </div>
+
+      <div class="crd">
+        <h2>🚧 Peajes pendientes</h2>
+        <div id="lista-peajes"></div>
+      </div>
+
+      <button class="btn btn-verde" id="btn-ir-crono">▶ &nbsp;Ponerme a trabajar</button>
+    </section>
+
+    <!-- ============ VISTA: PROYECTOS ============ -->
+    <section class="vista" id="vista-proyectos">
+      <div id="lista-proyectos"></div>
+    </section>
+
+    <!-- ============ VISTA: TIEMPO ============ -->
+    <section class="vista" id="vista-tiempo">
+      <div class="crd" id="crd-crono">
+        <h2>⏱ Cronómetro</h2>
+        <label class="campo" id="campo-crono-proy"><span class="et">Proyecto</span>
+          <select id="sel-crono"></select>
+        </label>
+        <div class="crono-tiempo" id="crono-tiempo">0:00:00</div>
+        <div class="crono-proy" id="crono-etiqueta"></div>
+        <button class="btn btn-verde" id="btn-crono">▶ &nbsp;Empezar</button>
+      </div>
+
+      <div class="crd">
+        <h2>✍️ Entrada manual</h2>
+        <label class="campo"><span class="et">Proyecto</span>
+          <select id="sel-manual"></select>
+        </label>
+        <label class="campo"><span class="et">Horas</span>
+          <input type="number" id="in-horas" min="0.25" max="24" step="0.25" placeholder="1.5" inputmode="decimal">
+        </label>
+        <label class="campo"><span class="et">Fecha</span>
+          <input type="date" id="in-fecha">
+        </label>
+        <button class="btn btn-azul" id="btn-manual">Guardar horas</button>
+        <p class="nota" style="margin-top:10px">Solo se puede registrar tiempo en proyectos prioritarios o activos. Nunca en bloqueados.</p>
+      </div>
+
+      <div class="crd">
+        <h2>🗓 Últimas sesiones</h2>
+        <div id="lista-sesiones"></div>
+      </div>
+    </section>
+
+    <!-- ============ VISTA: AJUSTES ============ -->
+    <section class="vista" id="vista-ajustes">
+      <div class="crd">
+        <h2>🤖 IA para estimaciones (OpenRouter)</h2>
+        <p class="nota" style="margin-bottom:12px">
+          Al crear un proyecto, un modelo de IA estima su duración por su cuenta y se hace la
+          media con la tuya. Consigue una clave gratuita en <b>openrouter.ai/keys</b>.
+          Los modelos gratuitos cambian de nombre a menudo: actualízalo aquí cuando haga falta.
+        </p>
+        <label class="campo"><span class="et">Clave API de OpenRouter</span>
+          <input type="password" id="aj-clave" placeholder="sk-or-v1-…" autocomplete="off">
+        </label>
+        <label class="campo"><span class="et">Modelo (usa uno gratuito, terminan en :free)</span>
+          <input type="text" id="aj-modelo" placeholder="deepseek/deepseek-chat-v3-0324:free" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </label>
+        <div class="fila-btns">
+          <button class="btn btn-borde" id="btn-guardar-ia">Guardar</button>
+          <button class="btn btn-azul" id="btn-probar-ia">Probar conexión</button>
+        </div>
+        <p class="nota" id="aj-estado-ia" style="margin-top:10px"></p>
+      </div>
+      <div class="crd">
+        <h2>💾 Copia de seguridad</h2>
+        <p class="nota" style="margin-bottom:12px">Todos tus datos viven solo en este dispositivo. Haz copias de vez en cuando.</p>
+        <button class="btn btn-borde" id="btn-exportar" style="margin-bottom:10px">⬆️ Exportar copia (JSON)</button>
+        <label class="campo"><span class="et">Importar: pega aquí el JSON de una copia</span>
+          <textarea id="txt-importar" rows="3" placeholder='{"proyectos":[...]}'></textarea>
+        </label>
+        <button class="btn btn-azul" id="btn-importar">📥 Importar copia</button>
+      </div>
+      <div class="crd">
+        <h2>☠️ Zona de peligro</h2>
+        <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
+      </div>
+      <p class="nota" style="text-align:center">Gatekeeper v1 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+    </section>
+
+  </div><!-- /app-normal -->
+</div><!-- /cont -->
+
+<!-- FAB para crear proyecto (solo en vista proyectos) -->
+<button class="fab" id="fab-nuevo" style="display:none" aria-label="Nuevo proyecto">+</button>
+
+<!-- ============ NAVEGACIÓN INFERIOR ============ -->
+<nav>
+  <button data-vista="panel" class="on"><span class="ni">🏠</span>Panel</button>
+  <button data-vista="proyectos"><span class="ni">📁</span>Proyectos</button>
+  <button data-vista="tiempo"><span class="ni">⏱</span>Tiempo</button>
+  <button data-vista="ajustes"><span class="ni">⚙️</span>Ajustes</button>
+</nav>
+
+<!-- ============ MODAL GENÉRICO (confirmaciones) ============ -->
+<div class="velo" id="velo-confirmar">
+  <div class="hoja">
+    <h3 id="conf-titulo"></h3>
+    <div class="msj" id="conf-msj"></div>
+    <div class="fila-btns">
+      <button class="btn btn-borde" id="conf-cancelar">Cancelar</button>
+      <button class="btn" id="conf-ok"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: NUEVO PROYECTO ============ -->
+<div class="velo" id="velo-nuevo">
+  <div class="hoja">
+    <h3>Nuevo proyecto</h3>
+    <label class="campo"><span class="et">Nombre</span>
+      <input type="text" id="np-nombre" maxlength="60" placeholder="Ej.: Curso de piano">
+    </label>
+    <label class="campo"><span class="et">Tipo</span>
+      <select id="np-tipo">
+        <option value="tesis">Tesis</option>
+        <option value="freelance">Freelance</option>
+        <option value="personal" selected>Personal</option>
+        <option value="otro">Otro</option>
+      </select>
+    </label>
+
+    <label class="campo" id="np-campo-prio" style="display:flex;gap:10px;align-items:center">
+      <input type="checkbox" id="np-prioritario" style="width:22px;height:22px;flex:none">
+      <span>Crear como <b style="color:var(--verde)">prioritario</b> (sin peaje; los peajes de otros proyectos apuntarán a él)</span>
+    </label>
+    <p class="nota nota-aviso" id="np-nota-primer" style="display:none;margin-bottom:12px">
+      Aún no tienes ningún proyecto prioritario, así que este primero será prioritario obligatoriamente.
+    </p>
+
+    <!-- Bloque de peaje: solo para proyectos NO prioritarios -->
+    <div id="np-bloque-peaje">
+      <hr class="sep">
+      <h3 style="font-size:16px">🚧 Peaje de entrada</h3>
+      <p class="nota" style="margin-bottom:12px">
+        Este proyecto nacerá <b>bloqueado</b>. Solo se desbloqueará cuando acumules las
+        horas de peaje en el prioritario que elijas, contadas desde hoy.
+        <b style="color:var(--ambar)">El peaje no se puede editar ni borrar después.</b>
+      </p>
+      <label class="campo"><span class="et">¿En qué consiste? (para que la IA pueda estimar)</span>
+        <textarea id="np-desc" rows="2" maxlength="300" placeholder="Ej.: montar un podcast quincenal: comprar micros, grabar dos pilotos y publicarlos"></textarea>
+      </label>
+      <label class="campo"><span class="et">Tu estimación de duración (días)</span>
+        <input type="number" id="np-dias" min="1" max="3650" step="1" placeholder="10" inputmode="numeric">
+      </label>
+      <label class="campo"><span class="et">Pagar el peaje trabajando en…</span>
+        <select id="np-objetivo"></select>
+      </label>
+      <p class="nota" id="np-info-peaje" style="margin-bottom:12px">
+        La IA hará su propia estimación de duración <b>sin ver la tuya</b>, y la duración
+        final será la <b>media de las dos</b>. El peaje será de 1.5h por día de esa media…
+        salvo que la ruleta 🎰 decida que hoy es tu día de suerte y lo deje en 1 hora.
+      </p>
+      <p class="nota nota-aviso" id="np-sin-ia" style="display:none;margin-bottom:12px">
+        ⚠️ No hay clave de OpenRouter configurada (Ajustes → IA), así que se usará solo tu estimación.
+      </p>
+    </div>
+
+    <div class="fila-btns" style="margin-top:8px">
+      <button class="btn btn-borde" id="np-cancelar">Cancelar</button>
+      <button class="btn btn-verde" id="np-crear">Crear</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ==================================================================
+   GATEKEEPER — Lógica de la app
+   Sistema anti-dispersión: los proyectos nuevos nacen bloqueados y
+   solo se desbloquean acumulando horas en proyectos prioritarios.
+   Todo se guarda en localStorage. Sin backend, sin login.
+   ================================================================== */
+
+(function(){
+'use strict';
+
+/* ---------------- Constantes ---------------- */
+var CLAVE_DATOS = 'gatekeeper_v1';       // clave única en localStorage
+var MAX_ACTIVOS = 3;                     // máximo de proyectos activos a la vez
+var HORAS_POR_DIA = 1.5;                 // mínimo sugerido de peaje por día estimado
+var DIAS_AVISO = 5;                      // días sin prioritario antes del banner rojo
+var PENALIZACION = 0.25;                 // +25% de peaje al borrar un bloqueado
+var PROB_SUERTE = 0.10;                  // probabilidad de que la ruleta 🎰 toque (1 de cada 10)
+var HORAS_SUERTE = 1;                    // peaje reducido cuando toca la suerte
+var MODELO_DEFECTO = 'deepseek/deepseek-chat-v3-0324:free';   // modelo gratuito inicial (editable en Ajustes)
+
+var NOMBRE_ESTADO = {
+  prioritario:'Prioritario', activo:'Activo', bloqueado:'Bloqueado',
+  pausado:'Pausado', terminado:'Terminado'
+};
+var NOMBRE_TIPO = { tesis:'Tesis', freelance:'Freelance', personal:'Personal', otro:'Otro' };
+
+/* ---------------- Estado en memoria ----------------
+   estado.proyectos: [{id, nombre, tipo, estado, avance, creadoEn,
+                       peaje:{horas, horasBase, dias, objetivoId} | null}]
+   estado.sesiones:  [{id, proyectoId, fecha:'YYYY-MM-DD', horas, prioritario, manual}]
+   estado.crono:     {proyectoId, inicio(ms)} | null
+----------------------------------------------------- */
+var estado = null;
+var errorCarga = false;
+var tickCrono = null;      // intervalo del cronómetro
+var vistaActual = 'panel';
+
+/* ================= UTILIDADES DE FECHA ================= */
+
+// Devuelve 'YYYY-MM-DD' en hora local para un objeto Date
+function claveDia(d){
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var dia = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + m + '-' + dia;
+}
+function hoy(){ return claveDia(new Date()); }
+
+// Días completos de diferencia entre dos claves 'YYYY-MM-DD'
+function diasEntre(claveA, claveB){
+  var a = new Date(claveA + 'T00:00:00');
+  var b = new Date(claveB + 'T00:00:00');
+  return Math.round((b - a) / 86400000);
+}
+
+// Clave del lunes de la semana actual (la semana empieza en lunes)
+function lunesDeEstaSemana(){
+  var d = new Date();
+  var dia = d.getDay();                 // 0=domingo, 1=lunes...
+  var retro = (dia === 0) ? 6 : dia - 1;
+  d.setDate(d.getDate() - retro);
+  return claveDia(d);
+}
+
+// Formatea horas decimales como '2h 30m'
+function fmtHoras(h){
+  var horas = Math.floor(h);
+  var min = Math.round((h - horas) * 60);
+  if (min === 60){ horas++; min = 0; }
+  if (horas === 0) return min + 'm';
+  if (min === 0) return horas + 'h';
+  return horas + 'h ' + min + 'm';
+}
+
+// Fecha corta legible '8 ago'
+function fmtFecha(clave){
+  var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  var p = clave.split('-');
+  return parseInt(p[2],10) + ' ' + meses[parseInt(p[1],10)-1];
+}
+
+function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+// Escapa texto para meterlo en HTML sin sustos
+function esc(t){
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ================= CARGA Y GUARDADO ================= */
+
+function datosVacios(){
+  return { version:1, proyectos:[], sesiones:[], crono:null,
+           config:{ orClave:'', orModelo:MODELO_DEFECTO } };
+}
+
+// Garantiza que el bloque de configuración exista (datos antiguos o importados)
+function normalizarConfig(datos){
+  if (!datos.config) datos.config = { orClave:'', orModelo:MODELO_DEFECTO };
+  if (!datos.config.orModelo) datos.config.orModelo = MODELO_DEFECTO;
+  if (typeof datos.config.orClave !== 'string') datos.config.orClave = '';
+}
+
+// Intenta cargar de localStorage. Si falla, activa la pantalla de rescate.
+function cargar(){
+  var crudo = null;
+  try {
+    crudo = localStorage.getItem(CLAVE_DATOS);
+  } catch(e){
+    errorCarga = true;
+    return;
+  }
+  if (crudo === null){ estado = datosVacios(); return; }
+  try {
+    var datos = JSON.parse(crudo);
+    if (!datos || !Array.isArray(datos.proyectos) || !Array.isArray(datos.sesiones)){
+      throw new Error('estructura inválida');
+    }
+    estado = datos;
+    if (!('crono' in estado)) estado.crono = null;
+    normalizarConfig(estado);
+  } catch(e){
+    errorCarga = true;   // los datos existen pero están dañados
+  }
+}
+
+// Guarda en localStorage avisando en lenguaje natural si algo va mal
+function guardar(){
+  try {
+    localStorage.setItem(CLAVE_DATOS, JSON.stringify(estado));
+  } catch(e){
+    toast('⚠️ No se han podido guardar los datos (puede que el almacenamiento esté lleno o bloqueado). Exporta una copia desde Ajustes cuanto antes.', 6000);
+  }
+}
+
+/* ================= LÓGICA DE NEGOCIO ================= */
+
+function proyecto(id){
+  for (var i=0;i<estado.proyectos.length;i++)
+    if (estado.proyectos[i].id === id) return estado.proyectos[i];
+  return null;
+}
+
+function porEstado(est){
+  return estado.proyectos.filter(function(p){ return p.estado === est; });
+}
+
+// Proyectos en los que SÍ se puede registrar tiempo
+function proyectosRegistrables(){
+  return estado.proyectos.filter(function(p){
+    return p.estado === 'prioritario' || p.estado === 'activo';
+  });
+}
+
+// Horas de peaje ya pagadas para un proyecto bloqueado:
+// sesiones en su prioritario objetivo con fecha >= fecha de creación del bloqueado
+function horasPeajePagadas(p){
+  if (!p.peaje) return 0;
+  var desde = p.creadoEn.slice(0,10);
+  var total = 0;
+  estado.sesiones.forEach(function(s){
+    if (s.proyectoId === p.peaje.objetivoId && s.fecha >= desde) total += s.horas;
+  });
+  return total;
+}
+
+function peajeCompleto(p){
+  return p.peaje && horasPeajePagadas(p) >= p.peaje.horas - 0.001;
+}
+
+// Racha: días consecutivos (hasta hoy, o ayer si hoy aún no has trabajado)
+// con al menos una sesión registrada en un proyecto prioritario
+function calcularRacha(){
+  var fechas = {};
+  estado.sesiones.forEach(function(s){ if (s.prioritario) fechas[s.fecha] = true; });
+  var d = new Date();
+  if (!fechas[claveDia(d)]) d.setDate(d.getDate()-1);   // hoy todavía no cuenta en contra
+  var racha = 0;
+  while (fechas[claveDia(d)]){
+    racha++;
+    d.setDate(d.getDate()-1);
+  }
+  return racha;
+}
+
+// Días desde la última sesión en un prioritario (null si no aplica el aviso)
+function diasSinPrioritario(){
+  var prios = porEstado('prioritario');
+  if (prios.length === 0) return null;    // sin prioritarios no hay nada que vigilar
+  var ultima = null;
+  estado.sesiones.forEach(function(s){
+    if (s.prioritario && (ultima === null || s.fecha > ultima)) ultima = s.fecha;
+  });
+  if (ultima === null){
+    // Nunca se ha registrado nada: contar desde la creación del prioritario más antiguo
+    var masAntiguo = null;
+    prios.forEach(function(p){
+      var f = p.creadoEn.slice(0,10);
+      if (masAntiguo === null || f < masAntiguo) masAntiguo = f;
+    });
+    ultima = masAntiguo;
+  }
+  return diasEntre(ultima, hoy());
+}
+
+// Registra una sesión de trabajo y comprueba si algún peaje se ha completado
+function registrarSesion(proyectoId, horas, fecha, manual){
+  var p = proyecto(proyectoId);
+  if (!p) { toast('Ese proyecto ya no existe.'); return false; }
+  if (p.estado !== 'prioritario' && p.estado !== 'activo'){
+    toast('🚫 Solo puedes registrar tiempo en proyectos prioritarios o activos.');
+    return false;
+  }
+  // Guardamos si la sesión fue en un prioritario (para racha y banner)
+  estado.sesiones.push({
+    id: uid(), proyectoId: proyectoId, fecha: fecha,
+    horas: Math.round(horas*100)/100, prioritario: p.estado === 'prioritario',
+    manual: !!manual
+  });
+
+  // ¿Algún proyecto bloqueado acaba de completar su peaje?
+  var desbloqueables = [];
+  porEstado('bloqueado').forEach(function(b){
+    if (peajeCompleto(b)) desbloqueables.push(b.nombre);
+  });
+  guardar();
+  if (desbloqueables.length > 0){
+    toast('🔓 ¡Peaje pagado! Ya puedes desbloquear: ' + desbloqueables.join(', '), 5000);
+  } else {
+    toast('✅ ' + fmtHoras(horas) + ' registradas en «' + p.nombre + '»');
+  }
+  return true;
+}
+
+/* ================= AVISOS (toast) ================= */
+
+var toastTimer = null;
+function toast(msj, ms){
+  var el = document.getElementById('toast');
+  el.textContent = msj;
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.style.display = 'none'; }, ms || 3000);
+}
+
+/* ================= MODAL DE CONFIRMACIÓN ================= */
+
+var confirmarCallback = null;
+function confirmar(titulo, mensaje, textoBoton, peligro, alAceptar){
+  document.getElementById('conf-titulo').textContent = titulo;
+  document.getElementById('conf-msj').textContent = mensaje;
+  var ok = document.getElementById('conf-ok');
+  ok.textContent = textoBoton;
+  ok.className = 'btn ' + (peligro ? 'btn-rojo' : 'btn-verde');
+  confirmarCallback = alAceptar;
+  document.getElementById('velo-confirmar').classList.add('visible');
+}
+function cerrarConfirmar(){
+  document.getElementById('velo-confirmar').classList.remove('visible');
+  document.getElementById('conf-cancelar').style.display = '';   // por si vino de un aviso
+  confirmarCallback = null;
+}
+
+// Aviso simple de un solo botón (reutiliza el modal de confirmación)
+function avisar(titulo, mensaje, textoBoton){
+  document.getElementById('conf-cancelar').style.display = 'none';
+  confirmar(titulo, mensaje, textoBoton || 'Entendido', false, null);
+}
+
+/* ================= RENDERIZADO ================= */
+
+function render(){
+  renderBanner();
+  renderPanel();
+  renderProyectos();
+  renderTiempo();
+}
+
+/* ----- Banner rojo persistente ----- */
+function renderBanner(){
+  var zona = document.getElementById('zona-banner');
+  var dias = diasSinPrioritario();
+  if (dias !== null && dias > DIAS_AVISO){
+    zona.innerHTML =
+      '<div class="banner-rojo"><span class="ico">🚨</span><span>Llevas <b>' + dias +
+      ' días</b> sin registrar horas en un proyecto prioritario. Los peajes no se pagan solos.</span></div>';
+  } else {
+    zona.innerHTML = '';
+  }
+}
+
+/* ----- Panel (dashboard) ----- */
+function renderPanel(){
+  // Racha
+  var racha = calcularRacha();
+  document.getElementById('racha-num').textContent = racha;
+  document.getElementById('racha-txt').textContent = racha === 1
+    ? 'día consecutivo trabajando en proyectos prioritarios'
+    : 'días consecutivos trabajando en proyectos prioritarios';
+
+  // Horas de esta semana por proyecto (barras)
+  var lunes = lunesDeEstaSemana();
+  var porProyecto = {};   // id -> horas
+  var totalSemana = 0;
+  estado.sesiones.forEach(function(s){
+    if (s.fecha >= lunes && s.fecha <= hoy()){
+      porProyecto[s.proyectoId] = (porProyecto[s.proyectoId] || 0) + s.horas;
+      totalSemana += s.horas;
+    }
+  });
+  var filas = [];
+  Object.keys(porProyecto).forEach(function(pid){
+    var p = proyecto(pid);
+    filas.push({
+      nombre: p ? p.nombre : '(proyecto borrado)',
+      estado: p ? p.estado : 'terminado',
+      horas: porProyecto[pid]
+    });
+  });
+  filas.sort(function(a,b){ return b.horas - a.horas; });
+
+  var g = document.getElementById('grafico-semana');
+  if (filas.length === 0){
+    g.innerHTML = '<p class="vacio">Todavía no hay horas esta semana. El cronómetro no muerde.</p>';
+  } else {
+    var max = filas[0].horas;
+    var html = '<p class="nota" style="margin-bottom:10px">Total: <b style="color:var(--texto)">' + fmtHoras(totalSemana) + '</b> desde el lunes</p>';
+    filas.forEach(function(f){
+      var color = f.estado === 'prioritario' ? 'barra-verde' : (f.estado === 'activo' ? 'barra-azul' : 'barra-gris');
+      var ancho = Math.max(4, Math.round(f.horas / max * 100));
+      html += '<div class="gsem-fila">' +
+        '<div class="gsem-cab"><b>' + esc(f.nombre) + '</b><span>' + fmtHoras(f.horas) + '</span></div>' +
+        '<div class="barra ' + color + '"><div style="width:' + ancho + '%"></div></div></div>';
+    });
+    g.innerHTML = html;
+  }
+
+  // Peajes pendientes
+  var bloqueados = porEstado('bloqueado');
+  var lp = document.getElementById('lista-peajes');
+  if (bloqueados.length === 0){
+    lp.innerHTML = '<p class="vacio">Sin peajes pendientes. Vía libre.</p>';
+  } else {
+    var html2 = '';
+    bloqueados.forEach(function(p){
+      var pagadas = horasPeajePagadas(p);
+      var pct = Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
+      var objetivo = proyecto(p.peaje.objetivoId);
+      html2 += '<div class="peaje-fila">' +
+        '<div class="peaje-cab"><b>🔒 ' + esc(p.nombre) + '</b><span>' + fmtHoras(pagadas) + ' / ' + fmtHoras(p.peaje.horas) + '</span></div>' +
+        '<div class="barra ' + (pct >= 100 ? 'barra-verde' : 'barra-ambar') + '"><div style="width:' + pct + '%"></div></div>' +
+        '<div class="peaje-det">' + (pct >= 100
+            ? '✅ Peaje completado: desbloquéalo desde Proyectos'
+            : 'Se paga trabajando en «' + (objetivo ? esc(objetivo.nombre) : '¿?') + '» · ' + pct + '%') +
+        '</div></div>';
+    });
+    lp.innerHTML = html2;
+  }
+}
+
+/* ----- Lista de proyectos ----- */
+function renderProyectos(){
+  var cont = document.getElementById('lista-proyectos');
+  if (estado.proyectos.length === 0){
+    cont.innerHTML = '<div class="crd"><p class="vacio">No hay proyectos todavía.<br>Crea tu primer proyecto <b>prioritario</b> con el botón +.</p></div>';
+    return;
+  }
+  var orden = ['prioritario','activo','pausado','bloqueado','terminado'];
+  var html = '';
+  orden.forEach(function(est){
+    var lista = porEstado(est);
+    if (lista.length === 0) return;
+    html += '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);margin:16px 4px 10px">' +
+            NOMBRE_ESTADO[est] + (est === 'activo' ? ' (' + lista.length + '/' + MAX_ACTIVOS + ')' : '') + '</h2>';
+    lista.forEach(function(p){ html += tarjetaProyecto(p); });
+  });
+  cont.innerHTML = html;
+}
+
+// Genera el HTML de una tarjeta de proyecto según su estado
+function tarjetaProyecto(p){
+  var h = '<div class="proy proy-' + p.estado + '" data-id="' + p.id + '">';
+  h += '<div class="proy-cab"><div>' +
+       '<div class="proy-nombre">' + esc(p.nombre) + '</div>' +
+       '<div class="proy-tipo">' + NOMBRE_TIPO[p.tipo] + ' · creado el ' + fmtFecha(p.creadoEn.slice(0,10)) + '</div>' +
+       '</div><span class="chip chip-' + p.estado + '">' + NOMBRE_ESTADO[p.estado] + '</span></div>';
+
+  if (p.estado === 'bloqueado'){
+    // Proyecto bloqueado: gris, sin acciones salvo desbloquear (si toca) o borrar (con castigo)
+    var pagadas = horasPeajePagadas(p);
+    var pct = Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
+    var objetivo = proyecto(p.peaje.objetivoId);
+    var penalizado = p.peaje.horas > p.peaje.horasBase + 0.001;
+    // Desglose de la estimación: la tuya, la de la IA y la media (o suerte)
+    if (p.peaje.suerte){
+      h += '<div class="proy-avance" style="color:var(--verde)">🎰 ¡Tocó la ruleta! Peaje de suerte: solo ' + fmtHoras(p.peaje.horasBase) + '</div>';
+    } else if (p.peaje.diasIA){
+      h += '<div class="proy-avance">Duración: tú ' + p.peaje.diasUsuario + 'd · IA ' + p.peaje.diasIA + 'd → media ' + p.peaje.dias + 'd</div>';
+    }
+    h += '<div class="proy-avance">Peaje: ' + fmtHoras(pagadas) + ' / ' + fmtHoras(p.peaje.horas) +
+         ' en «' + (objetivo ? esc(objetivo.nombre) : '¿?') + '»' +
+         (penalizado ? ' <span style="color:var(--rojo)">(+' + fmtHoras(p.peaje.horas - p.peaje.horasBase) + ' por penalizaciones)</span>' : '') +
+         '</div>' +
+         '<div class="barra ' + (pct >= 100 ? 'barra-verde' : 'barra-gris') + '"><div style="width:' + pct + '%"></div></div>';
+    h += '<div class="proy-acciones">';
+    if (pct >= 100){
+      h += '<button class="btn btn-verde btn-chico" data-accion="desbloquear">🔓 Desbloquear</button>';
+    }
+    h += '<button class="btn btn-borde btn-chico" data-accion="borrar-bloqueado" style="color:var(--rojo)">🗑 Borrar (+25% al resto)</button>';
+    h += '</div>';
+
+  } else if (p.estado === 'terminado'){
+    h += '<div class="proy-avance">Avance final: ' + p.avance + '%</div>' +
+         '<div class="proy-acciones"><button class="btn btn-borde btn-chico" data-accion="borrar-simple">🗑 Borrar</button></div>';
+
+  } else {
+    // prioritario / activo / pausado: avance editable y acciones
+    h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + p.avance + '%</b></div>' +
+         '<div class="barra ' + (p.estado === 'prioritario' ? 'barra-verde' : p.estado === 'activo' ? 'barra-azul' : 'barra-ambar') + '">' +
+         '<div style="width:' + p.avance + '%"></div></div>' +
+         '<input type="range" min="0" max="100" step="5" value="' + p.avance + '" data-accion="avance" aria-label="Avance">';
+    h += '<div class="proy-acciones">';
+    if (p.estado === 'activo'){
+      h += '<button class="btn btn-borde btn-chico" data-accion="pausar">⏸ Pausar</button>';
+    }
+    if (p.estado === 'pausado'){
+      h += '<button class="btn btn-azul btn-chico" data-accion="reactivar">▶ Reactivar</button>';
+    }
+    h += '<button class="btn btn-borde btn-chico" data-accion="terminar">🏁 Terminar</button>';
+    h += '<button class="btn btn-borde btn-chico" data-accion="borrar-simple" style="color:var(--rojo)">🗑</button>';
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+/* ----- Vista tiempo: cronómetro, manual, sesiones ----- */
+function renderTiempo(){
+  // Selectores de proyecto (solo prioritarios y activos)
+  var opciones = proyectosRegistrables().map(function(p){
+    return '<option value="' + p.id + '">' + (p.estado === 'prioritario' ? '🟢 ' : '🔵 ') + esc(p.nombre) + '</option>';
+  }).join('');
+  var vacias = '<option value="">— No hay proyectos donde registrar —</option>';
+
+  var selCrono = document.getElementById('sel-crono');
+  var selManual = document.getElementById('sel-manual');
+  var valorCrono = selCrono.value, valorManual = selManual.value;
+  selCrono.innerHTML = opciones || vacias;
+  selManual.innerHTML = opciones || vacias;
+  // Conservar la selección previa si sigue existiendo
+  if (valorCrono && proyecto(valorCrono)) selCrono.value = valorCrono;
+  if (valorManual && proyecto(valorManual)) selManual.value = valorManual;
+
+  // Fecha por defecto de la entrada manual: hoy (y nunca en el futuro)
+  var inFecha = document.getElementById('in-fecha');
+  if (!inFecha.value) inFecha.value = hoy();
+  inFecha.max = hoy();
+
+  renderCrono();
+
+  // Últimas 10 sesiones
+  var lista = document.getElementById('lista-sesiones');
+  if (estado.sesiones.length === 0){
+    lista.innerHTML = '<p class="vacio">Sin sesiones todavía.</p>';
+  } else {
+    var ult = estado.sesiones.slice(-10).reverse();
+    lista.innerHTML = ult.map(function(s){
+      var p = proyecto(s.proyectoId);
+      return '<div class="ses-fila"><b>' + (s.prioritario ? '🟢 ' : '🔵 ') +
+             esc(p ? p.nombre : '(borrado)') + '</b>' +
+             '<span class="der">' + fmtHoras(s.horas) + ' · ' + fmtFecha(s.fecha) + (s.manual ? ' ✍️' : '') + '</span></div>';
+    }).join('');
+  }
+}
+
+// Pinta el estado del cronómetro (en marcha o parado)
+function renderCrono(){
+  var btn = document.getElementById('btn-crono');
+  var tiempo = document.getElementById('crono-tiempo');
+  var etiqueta = document.getElementById('crono-etiqueta');
+  var campoSel = document.getElementById('campo-crono-proy');
+  var crd = document.getElementById('crd-crono');
+
+  if (estado.crono){
+    var p = proyecto(estado.crono.proyectoId);
+    crd.classList.add('crono-activo');
+    campoSel.style.display = 'none';
+    etiqueta.textContent = 'Trabajando en «' + (p ? p.nombre : '¿?') + '»';
+    btn.textContent = '⏹  Parar y guardar';
+    btn.className = 'btn btn-rojo';
+    actualizarTiempoCrono();
+    if (!tickCrono) tickCrono = setInterval(actualizarTiempoCrono, 1000);
+  } else {
+    crd.classList.remove('crono-activo');
+    campoSel.style.display = '';
+    etiqueta.textContent = '';
+    tiempo.textContent = '0:00:00';
+    btn.textContent = '▶  Empezar';
+    btn.className = 'btn btn-verde';
+    if (tickCrono){ clearInterval(tickCrono); tickCrono = null; }
+  }
+}
+
+function actualizarTiempoCrono(){
+  if (!estado.crono) return;
+  var seg = Math.max(0, Math.floor((Date.now() - estado.crono.inicio) / 1000));
+  var h = Math.floor(seg/3600), m = Math.floor((seg%3600)/60), s = seg%60;
+  document.getElementById('crono-tiempo').textContent =
+    h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+/* ================= ACCIONES SOBRE PROYECTOS ================= */
+
+// Desbloquear un proyecto con el peaje ya pagado (respetando el límite de activos)
+function desbloquear(p){
+  if (!peajeCompleto(p)){ toast('El peaje aún no está pagado.'); return; }
+  if (porEstado('activo').length >= MAX_ACTIVOS){
+    toast('🚫 Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes de desbloquear este.', 4500);
+    return;
+  }
+  p.estado = 'activo';
+  guardar(); render();
+  toast('🔓 «' + p.nombre + '» desbloqueado y activo. A por él.');
+}
+
+// Reactivar un proyecto pausado (respetando el límite de activos)
+function reactivar(p){
+  if (porEstado('activo').length >= MAX_ACTIVOS){
+    toast('🚫 Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes.', 4500);
+    return;
+  }
+  p.estado = 'activo';
+  guardar(); render();
+  toast('▶ «' + p.nombre + '» reactivado.');
+}
+
+// Bloqueados que dependen del peaje de un prioritario concreto
+function dependientesDe(prioritarioId){
+  return porEstado('bloqueado').filter(function(b){
+    return b.peaje && b.peaje.objetivoId === prioritarioId;
+  });
+}
+
+// Terminar un proyecto. Si es prioritario con peajes apuntándole,
+// hay que transferirlos a otro prioritario (o no se puede terminar).
+function terminar(p){
+  if (p.estado === 'prioritario'){
+    var deps = dependientesDe(p.id);
+    if (deps.length > 0){
+      var otros = porEstado('prioritario').filter(function(x){ return x.id !== p.id; });
+      if (otros.length === 0){
+        toast('🚫 No puedes terminarlo: ' + deps.length + ' proyecto(s) bloqueado(s) pagan su peaje trabajando en este y no hay otro prioritario al que transferirlos.', 6000);
+        return;
+      }
+      var destino = otros[0];
+      confirmar('Terminar «' + p.nombre + '»',
+        deps.length + ' proyecto(s) bloqueado(s) pagan su peaje en este prioritario.\n\nSus peajes pasarán a pagarse trabajando en «' + destino.nombre + '» (el progreso se recalculará contra ese proyecto).',
+        'Terminar y transferir', false, function(){
+          deps.forEach(function(b){ b.peaje.objetivoId = destino.id; });
+          p.estado = 'terminado'; p.avance = 100;
+          guardar(); render();
+          toast('🏁 «' + p.nombre + '» terminado. Peajes transferidos.');
+        });
+      return;
+    }
+  }
+  confirmar('Terminar «' + p.nombre + '»',
+    'Se marcará como terminado (tachado). Ya no podrás registrar horas en él.',
+    'Terminar', false, function(){
+      p.estado = 'terminado'; p.avance = 100;
+      guardar(); render();
+      toast('🏁 «' + p.nombre + '» terminado. Uno menos.');
+    });
+}
+
+// Borrar un proyecto bloqueado: castigo del +25% de peaje al resto de bloqueados
+function borrarBloqueado(p){
+  var otros = porEstado('bloqueado').filter(function(x){ return x.id !== p.id; });
+  var aviso = 'Rendirse tiene precio.\n\nSi borras «' + p.nombre + '», el peaje de TODOS los demás proyectos bloqueados subirá un 25%';
+  aviso += otros.length > 0
+    ? ' (afecta a ' + otros.length + ' proyecto(s)).'
+    : '. Ahora mismo no hay otros bloqueados, pero que conste.';
+  confirmar('⚠️ Borrar proyecto bloqueado', aviso, 'Borrar y asumir el castigo', true, function(){
+    otros.forEach(function(b){
+      b.peaje.horas = Math.round(b.peaje.horas * (1 + PENALIZACION) * 100) / 100;
+    });
+    eliminarProyecto(p.id);
+    guardar(); render();
+    toast(otros.length > 0
+      ? '🗑 Borrado. Peajes del resto aumentados un 25%. Te lo advertí.'
+      : '🗑 Borrado.');
+  });
+}
+
+// Borrado sin castigo (terminados, activos, pausados, prioritarios sin dependientes)
+function borrarSimple(p){
+  if (p.estado === 'prioritario'){
+    var deps = dependientesDe(p.id);
+    if (deps.length > 0){
+      var otros = porEstado('prioritario').filter(function(x){ return x.id !== p.id; });
+      if (otros.length === 0){
+        toast('🚫 No puedes borrarlo: ' + deps.length + ' proyecto(s) bloqueado(s) dependen de su peaje y no hay otro prioritario.', 6000);
+        return;
+      }
+      var destino = otros[0];
+      confirmar('Borrar «' + p.nombre + '»',
+        'Sus sesiones se borrarán y los peajes que apuntaban a él pasarán a pagarse en «' + destino.nombre + '».',
+        'Borrar', true, function(){
+          deps.forEach(function(b){ b.peaje.objetivoId = destino.id; });
+          eliminarProyecto(p.id);
+          guardar(); render();
+          toast('🗑 Proyecto borrado.');
+        });
+      return;
+    }
+  }
+  confirmar('Borrar «' + p.nombre + '»',
+    'Se borrará el proyecto y sus sesiones registradas. Esto no se puede deshacer.',
+    'Borrar', true, function(){
+      eliminarProyecto(p.id);
+      guardar(); render();
+      toast('🗑 Proyecto borrado.');
+    });
+}
+
+// Quita el proyecto y todo lo asociado a él (sesiones y cronómetro en marcha)
+function eliminarProyecto(id){
+  estado.proyectos = estado.proyectos.filter(function(p){ return p.id !== id; });
+  estado.sesiones = estado.sesiones.filter(function(s){ return s.proyectoId !== id; });
+  if (estado.crono && estado.crono.proyectoId === id) estado.crono = null;
+}
+
+/* ================= ESTIMACIÓN CON IA (OpenRouter) ================= */
+
+// Pide a la IA una estimación de duración INDEPENDIENTE (no ve la tuya).
+// Devuelve un número de días, o null si no hay clave configurada, falla la
+// red o la respuesta no se entiende. La app siempre funciona sin IA:
+// en ese caso se usa solo tu estimación.
+function estimarConIA(nombre, tipo, descripcion){
+  var clave = (estado.config.orClave || '').trim();
+  var modelo = (estado.config.orModelo || '').trim() || MODELO_DEFECTO;
+  if (!clave) return Promise.resolve(null);
+
+  var prompt =
+    'Eres un estimador realista de proyectos personales. ' +
+    'Proyecto: «' + nombre + '» (tipo: ' + tipo + ').' +
+    (descripcion ? ' Descripción: ' + descripcion + '.' : '') +
+    ' La persona lo hará en su tiempo libre, una o dos horas al día como mucho. ' +
+    'Estima cuántos DÍAS de calendario tardará en terminarlo de verdad ' +
+    '(la gente siempre se queda corta al estimar). ' +
+    'Responde SOLO con un número entero de días, sin ninguna palabra más.';
+
+  // Cortamos la petición a los 25 segundos para no dejar el botón colgado
+  var control = new AbortController();
+  var temporizador = setTimeout(function(){ control.abort(); }, 25000);
+
+  return fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + clave, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: modelo,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0,
+      max_tokens: 300
+    }),
+    signal: control.signal
+  }).then(function(res){
+    if (!res.ok) return null;
+    return res.json().then(function(datos){
+      var texto = (datos && datos.choices && datos.choices[0] && datos.choices[0].message &&
+                   datos.choices[0].message.content) || '';
+      var m = String(texto).match(/\d+(?:[.,]\d+)?/);   // primer número de la respuesta
+      if (!m) return null;
+      var dias = Math.round(parseFloat(m[0].replace(',', '.')));
+      if (!isFinite(dias) || dias < 1) return null;
+      return Math.min(dias, 730);   // techo de 2 años por si el modelo alucina
+    });
+  }).catch(function(){
+    return null;
+  }).finally(function(){
+    clearTimeout(temporizador);
+  });
+}
+
+/* ================= NUEVO PROYECTO ================= */
+
+function abrirNuevoProyecto(){
+  var prios = porEstado('prioritario');
+  var chk = document.getElementById('np-prioritario');
+  var notaPrimer = document.getElementById('np-nota-primer');
+
+  // Si no hay ningún prioritario, el primero tiene que serlo a la fuerza
+  if (prios.length === 0){
+    chk.checked = true;
+    chk.disabled = true;
+    notaPrimer.style.display = 'block';
+  } else {
+    chk.checked = false;
+    chk.disabled = false;
+    notaPrimer.style.display = 'none';
+  }
+
+  // Rellenar el selector de prioritarios para el peaje
+  document.getElementById('np-objetivo').innerHTML = prios.map(function(p){
+    return '<option value="' + p.id + '">' + esc(p.nombre) + '</option>';
+  }).join('');
+
+  document.getElementById('np-nombre').value = '';
+  document.getElementById('np-desc').value = '';
+  document.getElementById('np-dias').value = '';
+  // Sin clave de OpenRouter avisamos de que solo contará tu estimación
+  document.getElementById('np-sin-ia').style.display =
+    (estado.config.orClave || '').trim() ? 'none' : 'block';
+  actualizarBloquePeaje();
+  document.getElementById('velo-nuevo').classList.add('visible');
+}
+
+function cerrarNuevoProyecto(){
+  document.getElementById('velo-nuevo').classList.remove('visible');
+}
+
+// Muestra u oculta el bloque de peaje según el checkbox de prioritario
+function actualizarBloquePeaje(){
+  var esPrio = document.getElementById('np-prioritario').checked;
+  document.getElementById('np-bloque-peaje').style.display = esPrio ? 'none' : 'block';
+}
+
+// Validar el formulario, pedir la estimación a la IA y lanzar la
+// confirmación de doble paso con el desglose de duraciones
+function intentarCrearProyecto(){
+  var nombre = document.getElementById('np-nombre').value.trim();
+  var tipo = document.getElementById('np-tipo').value;
+  var esPrio = document.getElementById('np-prioritario').checked;
+  var descripcion = document.getElementById('np-desc').value.trim();
+
+  if (!nombre){ toast('Ponle un nombre al proyecto.'); return; }
+
+  var sinTerminar = estado.proyectos.filter(function(p){ return p.estado !== 'terminado'; }).length;
+
+  // Prioritario: sin peaje ni estimaciones, solo la confirmación de doble paso
+  if (esPrio){
+    var msjPrio = 'Vas a crear «' + nombre + '» como PRIORITARIO (sin peaje).' +
+      (sinTerminar > 0 ? '\n\nTienes ' + sinTerminar + ' proyecto(s) sin terminar. ¿Seguro?' : '\n\n¿Seguro?');
+    confirmar('Un momento…', msjPrio, 'Sí, crear prioritario', false, function(){
+      crearProyecto(nombre, tipo, descripcion, true, null);
+    });
+    return;
+  }
+
+  var diasUsuario = parseInt(document.getElementById('np-dias').value, 10);
+  var objetivoId = document.getElementById('np-objetivo').value;
+  if (!diasUsuario || diasUsuario < 1){ toast('Indica tu estimación de duración en días.'); return; }
+  if (!objetivoId || !proyecto(objetivoId)){ toast('Elige el prioritario donde pagarás el peaje.'); return; }
+
+  // Pedir la estimación independiente a la IA (el botón avisa mientras tanto)
+  var btn = document.getElementById('np-crear');
+  btn.disabled = true;
+  btn.textContent = '🤖 La IA está evaluando…';
+
+  estimarConIA(nombre, tipo, descripcion).then(function(diasIA){
+    btn.disabled = false;
+    btn.textContent = 'Crear';
+
+    // Duración final: media entre tu estimación y la de la IA (si respondió)
+    var diasFinales = diasIA !== null
+      ? Math.round(((diasUsuario + diasIA) / 2) * 10) / 10
+      : diasUsuario;
+    // Peaje: 1.5h por día de la duración final, redondeado a media hora
+    var peajeHoras = Math.max(0.5, Math.round(diasFinales * HORAS_POR_DIA * 2) / 2);
+
+    var desglose = diasIA !== null
+      ? 'Tu estimación: ' + diasUsuario + ' días\nLa IA estima: ' + diasIA +
+        ' días\nDuración final (media): ' + diasFinales + ' días'
+      : 'Tu estimación: ' + diasUsuario + ' días\n(La IA no ha podido estimar: se usa solo la tuya.)';
+
+    var msj = 'Tienes ' + sinTerminar + ' proyecto(s) sin terminar. ¿Seguro?\n\n' +
+      desglose + '\n\n«' + nombre + '» nacerá BLOQUEADO con un peaje de ' + peajeHoras +
+      'h en «' + proyecto(objetivoId).nombre + '», contadas desde hoy.\n\n' +
+      'El peaje NO se podrá editar ni borrar.';
+
+    confirmar('Un momento…', msj, 'Sí, crearlo bloqueado', false, function(){
+      // 🎰 La ruleta: muy de vez en cuando, el peaje se queda en 1 hora
+      var suerte = Math.random() < PROB_SUERTE;
+      var horasFinales = suerte ? HORAS_SUERTE : peajeHoras;
+      crearProyecto(nombre, tipo, descripcion, false, {
+        horas: horasFinales,       // horas exigidas (puede crecer por penalizaciones)
+        horasBase: horasFinales,   // peaje original, para mostrar el castigo acumulado
+        dias: diasFinales,         // duración final (media)
+        diasUsuario: diasUsuario,  // lo que estimaste tú
+        diasIA: diasIA,            // lo que estimó la IA (null si no pudo)
+        objetivoId: objetivoId,    // prioritario donde se paga
+        suerte: suerte             // si tocó la ruleta
+      });
+      if (suerte){
+        // Avisar de la suerte después de cerrar el modal de creación
+        setTimeout(function(){
+          avisar('🎰 ¡Ha tocado la ruleta!',
+            'Hoy es tu día de suerte: el peaje de «' + nombre + '» se queda en SOLO ' +
+            HORAS_SUERTE + ' hora en «' + (proyecto(objetivoId) ? proyecto(objetivoId).nombre : '¿?') +
+            '».\n\nUna horita y a por el proyecto nuevo.', '¡Toma ya!');
+        }, 250);
+      }
+    });
+  });
+}
+
+function crearProyecto(nombre, tipo, descripcion, esPrio, peaje){
+  var p = {
+    id: uid(), nombre: nombre, tipo: tipo, descripcion: descripcion,
+    estado: esPrio ? 'prioritario' : 'bloqueado',
+    avance: 0,
+    creadoEn: new Date().toISOString(),
+    peaje: esPrio ? null : peaje
+  };
+  estado.proyectos.push(p);
+  guardar();
+  cerrarNuevoProyecto();
+  render();
+  toast(esPrio
+    ? '🟢 «' + nombre + '» creado como prioritario.'
+    : '🔒 «' + nombre + '» creado y BLOQUEADO. A pagar el peaje.');
+}
+
+/* ================= CRONÓMETRO ================= */
+
+function alternarCrono(){
+  if (estado.crono){
+    // Parar: calcular horas y registrar la sesión
+    var transcurrido = Date.now() - estado.crono.inicio;
+    var pid = estado.crono.proyectoId;
+    if (transcurrido < 60000){
+      // Menos de un minuto: preguntar si se descarta
+      confirmar('Sesión muy corta', 'Llevas menos de un minuto. ¿Descartar esta sesión?', 'Descartar', true, function(){
+        estado.crono = null;
+        guardar(); renderTiempo();
+      });
+      return;
+    }
+    estado.crono = null;
+    registrarSesion(pid, transcurrido / 3600000, hoy(), false);
+    render();
+  } else {
+    // Empezar: validar proyecto elegido
+    var sel = document.getElementById('sel-crono');
+    var p = proyecto(sel.value);
+    if (!p){ toast('Elige un proyecto primero (prioritario o activo).'); return; }
+    if (p.estado !== 'prioritario' && p.estado !== 'activo'){
+      toast('🚫 Ese proyecto no admite registro de tiempo.');
+      return;
+    }
+    estado.crono = { proyectoId: p.id, inicio: Date.now() };
+    guardar();
+    renderCrono();
+  }
+}
+
+/* ================= ENTRADA MANUAL ================= */
+
+function guardarManual(){
+  var sel = document.getElementById('sel-manual');
+  var horas = parseFloat(document.getElementById('in-horas').value);
+  var fecha = document.getElementById('in-fecha').value;
+  if (!sel.value || !proyecto(sel.value)){ toast('Elige un proyecto.'); return; }
+  if (!horas || horas <= 0 || horas > 24){ toast('Indica unas horas válidas (entre 0.25 y 24).'); return; }
+  if (!fecha){ toast('Indica la fecha.'); return; }
+  if (fecha > hoy()){ toast('No puedes registrar horas del futuro. Ojalá.'); return; }
+  if (registrarSesion(sel.value, horas, fecha, true)){
+    document.getElementById('in-horas').value = '';
+    render();
+  }
+}
+
+/* ================= EXPORTAR / IMPORTAR ================= */
+
+function exportarJSON(){
+  var texto = JSON.stringify(estado, null, 2);
+  var blob = new Blob([texto], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'gatekeeper-copia-' + hoy() + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+  toast('⬆️ Copia exportada. Guárdala en un sitio seguro.');
+}
+
+// Valida e importa un JSON de copia de seguridad. Devuelve true si fue bien.
+function importarJSON(texto){
+  var datos;
+  try {
+    datos = JSON.parse(texto);
+  } catch(e){
+    toast('❌ Eso no parece un JSON válido. Revisa que lo hayas pegado entero.');
+    return false;
+  }
+  if (!datos || !Array.isArray(datos.proyectos) || !Array.isArray(datos.sesiones)){
+    toast('❌ El JSON no tiene el formato de una copia de Gatekeeper.');
+    return false;
+  }
+  if (!('crono' in datos)) datos.crono = null;
+  normalizarConfig(datos);
+  estado = datos;
+  guardar();
+  // Reflejar la configuración importada en los campos de Ajustes
+  var inClave = document.getElementById('aj-clave');
+  var inModelo = document.getElementById('aj-modelo');
+  if (inClave) inClave.value = estado.config.orClave;
+  if (inModelo) inModelo.value = estado.config.orModelo;
+  return true;
+}
+
+/* ================= NAVEGACIÓN ================= */
+
+function irA(vista){
+  vistaActual = vista;
+  document.querySelectorAll('.vista').forEach(function(v){
+    v.classList.toggle('visible', v.id === 'vista-' + vista);
+  });
+  document.querySelectorAll('nav button').forEach(function(b){
+    b.classList.toggle('on', b.dataset.vista === vista);
+  });
+  // El botón + solo aparece en la vista de proyectos
+  document.getElementById('fab-nuevo').style.display = (vista === 'proyectos') ? 'block' : 'none';
+  window.scrollTo(0,0);
+}
+
+/* ================= PANTALLA DE ERROR ================= */
+
+function mostrarPantallaError(){
+  document.getElementById('app-normal').classList.add('oculto');
+  document.getElementById('pantalla-error').classList.add('visible');
+
+  // Descargar lo que haya guardado, aunque esté dañado
+  document.getElementById('btn-rescatar').addEventListener('click', function(){
+    var crudo = '';
+    try { crudo = localStorage.getItem(CLAVE_DATOS) || ''; } catch(e){}
+    var blob = new Blob([crudo], {type:'text/plain'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'gatekeeper-rescate-' + hoy() + '.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+  });
+
+  // Importar una copia buena
+  document.getElementById('btn-importar-rescate').addEventListener('click', function(){
+    var texto = document.getElementById('txt-rescate').value.trim();
+    if (!texto){ toast('Pega primero el contenido de tu copia.'); return; }
+    if (importarJSON(texto)){
+      location.reload();
+    }
+  });
+
+  // Empezar de cero
+  document.getElementById('btn-cero').addEventListener('click', function(){
+    if (window.confirm('¿Seguro? Se borrará lo que quede de los datos antiguos.')){
+      estado = datosVacios();
+      guardar();
+      location.reload();
+    }
+  });
+}
+
+/* ================= EVENTOS ================= */
+
+function conectarEventos(){
+  // Navegación inferior
+  document.querySelectorAll('nav button').forEach(function(b){
+    b.addEventListener('click', function(){ irA(b.dataset.vista); });
+  });
+  document.getElementById('btn-ir-crono').addEventListener('click', function(){ irA('tiempo'); });
+
+  // FAB nuevo proyecto
+  document.getElementById('fab-nuevo').addEventListener('click', abrirNuevoProyecto);
+
+  // Modal nuevo proyecto
+  document.getElementById('np-cancelar').addEventListener('click', cerrarNuevoProyecto);
+  document.getElementById('np-crear').addEventListener('click', intentarCrearProyecto);
+  document.getElementById('np-prioritario').addEventListener('change', actualizarBloquePeaje);
+
+  // Modal de confirmación genérico
+  document.getElementById('conf-cancelar').addEventListener('click', cerrarConfirmar);
+  document.getElementById('conf-ok').addEventListener('click', function(){
+    var cb = confirmarCallback;
+    cerrarConfirmar();
+    if (cb) cb();
+  });
+
+  // Cronómetro y entrada manual
+  document.getElementById('btn-crono').addEventListener('click', alternarCrono);
+  document.getElementById('btn-manual').addEventListener('click', guardarManual);
+
+  // Acciones dentro de las tarjetas de proyecto (delegación de eventos)
+  document.getElementById('lista-proyectos').addEventListener('click', function(ev){
+    var btn = ev.target.closest('[data-accion]');
+    if (!btn || btn.dataset.accion === 'avance') return;
+    var tarjeta = btn.closest('.proy');
+    var p = proyecto(tarjeta.dataset.id);
+    if (!p) return;
+    switch (btn.dataset.accion){
+      case 'desbloquear':      desbloquear(p); break;
+      case 'reactivar':        reactivar(p); break;
+      case 'pausar':
+        p.estado = 'pausado'; guardar(); render();
+        toast('⏸ «' + p.nombre + '» pausado. No cuenta para el límite de activos.');
+        break;
+      case 'terminar':         terminar(p); break;
+      case 'borrar-bloqueado': borrarBloqueado(p); break;
+      case 'borrar-simple':    borrarSimple(p); break;
+    }
+  });
+
+  // Slider de avance (change para no guardar en cada pixel)
+  document.getElementById('lista-proyectos').addEventListener('change', function(ev){
+    if (ev.target.dataset.accion !== 'avance') return;
+    var tarjeta = ev.target.closest('.proy');
+    var p = proyecto(tarjeta.dataset.id);
+    if (!p) return;
+    p.avance = parseInt(ev.target.value, 10);
+    guardar();
+    render();
+  });
+
+  // Ajustes: configuración de la IA (OpenRouter)
+  document.getElementById('aj-clave').value = estado.config.orClave;
+  document.getElementById('aj-modelo').value = estado.config.orModelo;
+  document.getElementById('btn-guardar-ia').addEventListener('click', function(){
+    estado.config.orClave = document.getElementById('aj-clave').value.trim();
+    estado.config.orModelo = document.getElementById('aj-modelo').value.trim() || MODELO_DEFECTO;
+    document.getElementById('aj-modelo').value = estado.config.orModelo;
+    guardar();
+    toast('💾 Configuración de IA guardada.');
+  });
+  document.getElementById('btn-probar-ia').addEventListener('click', function(){
+    // Guardar lo que haya escrito y lanzar una estimación de prueba
+    estado.config.orClave = document.getElementById('aj-clave').value.trim();
+    estado.config.orModelo = document.getElementById('aj-modelo').value.trim() || MODELO_DEFECTO;
+    guardar();
+    var salida = document.getElementById('aj-estado-ia');
+    if (!estado.config.orClave){
+      salida.textContent = '❌ Falta la clave API. Consíguela gratis en openrouter.ai/keys.';
+      return;
+    }
+    salida.textContent = '⏳ Probando conexión con «' + estado.config.orModelo + '»…';
+    estimarConIA('Pintar una habitación pequeña', 'personal', 'prueba de conexión')
+      .then(function(dias){
+        salida.textContent = dias !== null
+          ? '✅ Conexión correcta: la IA respondió (' + dias + ' días para el proyecto de prueba).'
+          : '❌ No hubo respuesta válida. Revisa la clave y el nombre del modelo (los gratuitos cambian a menudo; mira openrouter.ai/models).';
+      });
+  });
+
+  // Ajustes: copia de seguridad
+  document.getElementById('btn-exportar').addEventListener('click', exportarJSON);
+  document.getElementById('btn-importar').addEventListener('click', function(){
+    var texto = document.getElementById('txt-importar').value.trim();
+    if (!texto){ toast('Pega primero el JSON de tu copia.'); return; }
+    confirmar('Importar copia', 'Se reemplazarán TODOS los datos actuales por los de la copia.', 'Importar', true, function(){
+      if (importarJSON(texto)){
+        document.getElementById('txt-importar').value = '';
+        render();
+        toast('📥 Copia importada correctamente.');
+      }
+    });
+  });
+
+  // Ajustes: borrar todo (doble confirmación)
+  document.getElementById('btn-borrar-todo').addEventListener('click', function(){
+    confirmar('☠️ Borrar TODOS los datos', 'Proyectos, sesiones, peajes, racha. Todo. Esto no se puede deshacer.', 'Lo entiendo, seguir', true, function(){
+      setTimeout(function(){
+        confirmar('Última oportunidad', '¿De verdad quieres dejar Gatekeeper a cero?', 'Sí, borrar todo', true, function(){
+          estado = datosVacios();
+          guardar(); render();
+          toast('Datos borrados. Empezamos de cero.');
+        });
+      }, 150);
+    });
+  });
+
+  // Al volver a la app (cambio de pestaña/app en iOS), refrescar el cronómetro
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden){ renderCrono(); renderBanner(); }
+  });
+}
+
+/* ================= ARRANQUE ================= */
+
+cargar();
+
+if (errorCarga){
+  mostrarPantallaError();
+} else {
+  conectarEventos();
+  render();
+  irA('panel');
+}
+
+// Registrar el service worker para que la app funcione sin conexión
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){
+      /* Sin service worker la app sigue funcionando, solo pierde el modo offline */
+    });
+  });
+}
+
+})();
+</script>
+</body>
+</html>
