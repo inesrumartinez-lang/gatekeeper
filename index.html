@@ -1081,13 +1081,14 @@ function eliminarProyecto(id){
 /* ================= ESTIMACIÓN CON IA (OpenRouter) ================= */
 
 // Pide a la IA una estimación de duración INDEPENDIENTE (no ve la tuya).
-// Devuelve un número de días, o null si no hay clave configurada, falla la
-// red o la respuesta no se entiende. La app siempre funciona sin IA:
-// en ese caso se usa solo tu estimación.
+// Devuelve siempre un objeto { dias, error }:
+//   - dias: número de días, o null si no se pudo estimar
+//   - error: texto en lenguaje natural explicando POR QUÉ falló (o null)
+// La app siempre funciona sin IA: si falla, se usa solo tu estimación.
 function estimarConIA(nombre, tipo, descripcion){
   var clave = (estado.config.orClave || '').trim();
   var modelo = (estado.config.orModelo || '').trim() || MODELO_DEFECTO;
-  if (!clave) return Promise.resolve(null);
+  if (!clave) return Promise.resolve({ dias:null, error:'no hay clave API configurada' });
 
   var prompt =
     'Eres un estimador realista de proyectos personales. ' +
@@ -1098,9 +1099,9 @@ function estimarConIA(nombre, tipo, descripcion){
     '(la gente siempre se queda corta al estimar). ' +
     'Responde SOLO con un número entero de días, sin ninguna palabra más.';
 
-  // Cortamos la petición a los 25 segundos para no dejar el botón colgado
+  // Cortamos la petición a los 40 segundos (los modelos razonadores son lentos)
   var control = new AbortController();
-  var temporizador = setTimeout(function(){ control.abort(); }, 25000);
+  var temporizador = setTimeout(function(){ control.abort(); }, 40000);
 
   return fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -1109,22 +1110,47 @@ function estimarConIA(nombre, tipo, descripcion){
       model: modelo,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0,
-      max_tokens: 300
+      // Margen amplio: los modelos razonadores gastan tokens "pensando"
+      // antes de escribir la respuesta y con poco límite se quedan a medias
+      max_tokens: 4000
     }),
     signal: control.signal
   }).then(function(res){
-    if (!res.ok) return null;
-    return res.json().then(function(datos){
-      var texto = (datos && datos.choices && datos.choices[0] && datos.choices[0].message &&
-                   datos.choices[0].message.content) || '';
-      var m = String(texto).match(/\d+(?:[.,]\d+)?/);   // primer número de la respuesta
-      if (!m) return null;
+    // Leemos el cuerpo siempre: cuando hay error, OpenRouter explica el motivo ahí
+    return res.json().catch(function(){ return null; }).then(function(datos){
+      if (!res.ok || (datos && datos.error)){
+        var detalle = (datos && datos.error && datos.error.message)
+          ? String(datos.error.message) : ('error HTTP ' + res.status);
+        // Caso típico con modelos gratuitos: hay que activar un ajuste de privacidad
+        if (/data policy|No endpoints found/i.test(detalle)){
+          detalle += ' → Activa «Free model publication» en openrouter.ai/settings/privacy';
+        } else if (res.status === 401){
+          detalle += ' → La clave API no es válida o está revocada (openrouter.ai/keys)';
+        } else if (res.status === 404 || res.status === 400){
+          detalle += ' → Revisa que el nombre del modelo exista tal cual en openrouter.ai/models';
+        } else if (res.status === 429){
+          detalle += ' → Límite de peticiones gratuitas alcanzado; prueba en un rato';
+        }
+        return { dias:null, error: detalle };
+      }
+      var msj = (datos && datos.choices && datos.choices[0] && datos.choices[0].message) || {};
+      var texto = String(msj.content || '');
+      var m = texto.match(/\d+(?:[.,]\d+)?/);   // primer número de la respuesta
+      if (!m && msj.reasoning){
+        // Algunos modelos razonadores dejan la conclusión en el campo 'reasoning':
+        // nos quedamos con el ÚLTIMO número, que suele ser la respuesta final
+        var todos = String(msj.reasoning).match(/\d+(?:[.,]\d+)?/g);
+        if (todos && todos.length) m = [todos[todos.length - 1]];
+      }
+      if (!m) return { dias:null, error:'el modelo respondió pero sin un número de días (prueba con otro modelo)' };
       var dias = Math.round(parseFloat(m[0].replace(',', '.')));
-      if (!isFinite(dias) || dias < 1) return null;
-      return Math.min(dias, 730);   // techo de 2 años por si el modelo alucina
+      if (!isFinite(dias) || dias < 1) return { dias:null, error:'el modelo dio una respuesta sin sentido' };
+      return { dias: Math.min(dias, 730), error:null };   // techo de 2 años por si alucina
     });
-  }).catch(function(){
-    return null;
+  }).catch(function(e){
+    return { dias:null, error: (e && e.name === 'AbortError')
+      ? 'el modelo tardó demasiado en responder (más de 40s)'
+      : 'no hay conexión con openrouter.ai (¿sin internet?)' };
   }).finally(function(){
     clearTimeout(temporizador);
   });
@@ -1205,9 +1231,10 @@ function intentarCrearProyecto(){
   btn.disabled = true;
   btn.textContent = '🤖 La IA está evaluando…';
 
-  estimarConIA(nombre, tipo, descripcion).then(function(diasIA){
+  estimarConIA(nombre, tipo, descripcion).then(function(resultado){
     btn.disabled = false;
     btn.textContent = 'Crear';
+    var diasIA = resultado.dias;
 
     // Duración final: media entre tu estimación y la de la IA (si respondió)
     var diasFinales = diasIA !== null
@@ -1219,7 +1246,8 @@ function intentarCrearProyecto(){
     var desglose = diasIA !== null
       ? 'Tu estimación: ' + diasUsuario + ' días\nLa IA estima: ' + diasIA +
         ' días\nDuración final (media): ' + diasFinales + ' días'
-      : 'Tu estimación: ' + diasUsuario + ' días\n(La IA no ha podido estimar: se usa solo la tuya.)';
+      : 'Tu estimación: ' + diasUsuario + ' días\n(La IA no ha podido estimar: ' +
+        resultado.error + '. Se usa solo la tuya.)';
 
     var msj = 'Tienes ' + sinTerminar + ' proyecto(s) sin terminar. ¿Seguro?\n\n' +
       desglose + '\n\n«' + nombre + '» nacerá BLOQUEADO con un peaje de ' + peajeHoras +
@@ -1491,12 +1519,12 @@ function conectarEventos(){
       salida.textContent = '❌ Falta la clave API. Consíguela gratis en openrouter.ai/keys.';
       return;
     }
-    salida.textContent = '⏳ Probando conexión con «' + estado.config.orModelo + '»…';
+    salida.textContent = '⏳ Probando conexión con «' + estado.config.orModelo + '»… (los modelos razonadores pueden tardar medio minuto)';
     estimarConIA('Pintar una habitación pequeña', 'personal', 'prueba de conexión')
-      .then(function(dias){
-        salida.textContent = dias !== null
-          ? '✅ Conexión correcta: la IA respondió (' + dias + ' días para el proyecto de prueba).'
-          : '❌ No hubo respuesta válida. Revisa la clave y el nombre del modelo (los gratuitos cambian a menudo; mira openrouter.ai/models).';
+      .then(function(resultado){
+        salida.textContent = resultado.dias !== null
+          ? '✅ Conexión correcta: la IA respondió (' + resultado.dias + ' días para el proyecto de prueba).'
+          : '❌ Fallo: ' + resultado.error;
       });
   });
 
