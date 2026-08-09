@@ -421,7 +421,8 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <b style="color:var(--ambar)">El peaje no se puede editar ni borrar después.</b>
       </p>
       <label class="campo"><span class="et">¿En qué consiste? (para que la IA pueda estimar)</span>
-        <textarea id="np-desc" rows="2" maxlength="300" placeholder="Ej.: montar un podcast quincenal: comprar micros, grabar dos pilotos y publicarlos"></textarea>
+        <textarea id="np-desc" rows="3" placeholder="Ej.: montar un podcast quincenal: comprar micros, grabar dos pilotos y publicarlos"></textarea>
+        <button type="button" class="btn btn-borde btn-chico" id="np-dictar" style="margin-top:8px">🎤 Dictar descripción</button>
       </label>
       <label class="campo"><span class="et">Tu estimación de duración (días)</span>
         <input type="number" id="np-dias" min="1" max="3650" step="1" placeholder="10" inputmode="numeric">
@@ -1092,12 +1093,15 @@ function estimarConIA(nombre, tipo, descripcion){
   if (!clave) return Promise.resolve({ dias:null, error:'no hay clave API configurada' });
 
   var prompt =
-    'Eres un estimador realista de proyectos personales. ' +
+    'Eres un estimador de duración de proyectos personales. ' +
     'Proyecto: «' + nombre + '» (tipo: ' + tipo + ').' +
     (descripcion ? ' Descripción: ' + descripcion + '.' : '') +
-    ' La persona lo hará en su tiempo libre, una o dos horas al día como mucho. ' +
-    'Estima cuántos DÍAS de calendario tardará en terminarlo de verdad ' +
-    '(la gente siempre se queda corta al estimar). ' +
+    ' Contexto de la persona: ejecuta sus proyectos con ayuda intensiva de IA (Claude), ' +
+    'va rápido, le basta el mínimo producto viable y no es perfeccionista. ' +
+    'Sus proyectos personales, freelance o de otro tipo suelen durar entre 1 y 10 días; ' +
+    'solo los de investigación o tesis se alargan más. ' +
+    'Dedicándole una o dos horas al día, estima en cuántos DÍAS de calendario lo terminará. ' +
+    'Sé realista pero ajustado: no infles la cifra. ' +
     'Responde SOLO con un número entero de días, sin ninguna palabra más.';
 
   // Cortamos la petición a los 40 segundos (los modelos razonadores son lentos)
@@ -1146,7 +1150,11 @@ function estimarConIA(nombre, tipo, descripcion){
       if (!m) return { dias:null, error:'el modelo respondió pero sin un número de días (prueba con otro modelo)' };
       var dias = Math.round(parseFloat(m[0].replace(',', '.')));
       if (!isFinite(dias) || dias < 1) return { dias:null, error:'el modelo dio una respuesta sin sentido' };
-      return { dias: Math.min(dias, 730), error:null };   // techo de 2 años por si alucina
+      // Techo de seguridad: los proyectos que no son de tesis/investigación se
+      // hacen con ayuda de IA y rara vez pasan de ~2 semanas; si el modelo se
+      // dispara, se recorta para que no infle el peaje. Las tesis van aparte.
+      var techo = (tipo === 'tesis') ? 730 : 14;
+      return { dias: Math.min(dias, techo), error:null };
     });
   }).catch(function(e){
     return { dias:null, error: (e && e.name === 'AbortError')
@@ -1155,6 +1163,64 @@ function estimarConIA(nombre, tipo, descripcion){
   }).finally(function(){
     clearTimeout(temporizador);
   });
+}
+
+/* ================= DICTADO POR VOZ ================= */
+
+// Reconocimiento de voz del navegador (en iPhone usa el dictado de Siri).
+// Si el navegador no lo soporta, el botón directamente no se muestra.
+var Reconocedor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+var dictado = null;   // instancia activa mientras se está dictando
+
+function alternarDictado(){
+  var btn = document.getElementById('np-dictar');
+
+  // Si ya está dictando, pararlo (onend restaura el botón)
+  if (dictado){ try { dictado.stop(); } catch(e){} return; }
+  if (!Reconocedor) return;
+
+  var rec = new Reconocedor();
+  rec.lang = 'es-ES';
+  rec.continuous = true;       // seguir escuchando hasta que se pare
+  rec.interimResults = false;  // solo frases confirmadas
+
+  // Cada frase reconocida se añade al final de la descripción
+  rec.onresult = function(ev){
+    var texto = '';
+    for (var i = ev.resultIndex; i < ev.results.length; i++){
+      if (ev.results[i].isFinal) texto += ev.results[i][0].transcript;
+    }
+    if (texto.trim()){
+      var campo = document.getElementById('np-desc');
+      campo.value = (campo.value ? campo.value.replace(/\s+$/, '') + ' ' : '') + texto.trim();
+    }
+  };
+
+  rec.onerror = function(ev){
+    if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){
+      toast('🎤 Sin permiso de micrófono. Permítelo cuando el navegador lo pida (o usa el micro del teclado).', 5000);
+    } else if (ev.error !== 'aborted' && ev.error !== 'no-speech'){
+      toast('🎤 El dictado falló (' + ev.error + '). Siempre puedes usar el micrófono del teclado.');
+    }
+  };
+
+  // Al terminar (por parar, error o silencio), restaurar el botón
+  rec.onend = function(){
+    dictado = null;
+    btn.textContent = '🎤 Dictar descripción';
+    btn.classList.remove('btn-rojo');
+    btn.classList.add('btn-borde');
+  };
+
+  try {
+    rec.start();
+    dictado = rec;
+    btn.textContent = '⏹ Parar dictado';
+    btn.classList.remove('btn-borde');
+    btn.classList.add('btn-rojo');
+  } catch(e){
+    toast('No se pudo iniciar el dictado. Usa el micrófono del teclado.');
+  }
 }
 
 /* ================= NUEVO PROYECTO ================= */
@@ -1183,6 +1249,8 @@ function abrirNuevoProyecto(){
   document.getElementById('np-nombre').value = '';
   document.getElementById('np-desc').value = '';
   document.getElementById('np-dias').value = '';
+  // El botón de dictado solo aparece si el navegador soporta reconocimiento de voz
+  document.getElementById('np-dictar').style.display = Reconocedor ? '' : 'none';
   // Sin clave de OpenRouter avisamos de que solo contará tu estimación
   document.getElementById('np-sin-ia').style.display =
     (estado.config.orClave || '').trim() ? 'none' : 'block';
@@ -1191,6 +1259,7 @@ function abrirNuevoProyecto(){
 }
 
 function cerrarNuevoProyecto(){
+  if (dictado){ try { dictado.stop(); } catch(e){} }   // no dejar el micro abierto
   document.getElementById('velo-nuevo').classList.remove('visible');
 }
 
@@ -1456,6 +1525,7 @@ function conectarEventos(){
   document.getElementById('np-cancelar').addEventListener('click', cerrarNuevoProyecto);
   document.getElementById('np-crear').addEventListener('click', intentarCrearProyecto);
   document.getElementById('np-prioritario').addEventListener('change', actualizarBloquePeaje);
+  document.getElementById('np-dictar').addEventListener('click', alternarDictado);
 
   // Modal de confirmación genérico
   document.getElementById('conf-cancelar').addEventListener('click', cerrarConfirmar);
