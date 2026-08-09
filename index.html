@@ -426,6 +426,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
     <label class="campo"><span class="et">Tipo</span>
       <select id="np-tipo">
         <option value="tesis">Tesis</option>
+        <option value="airesearch">AI research</option>
         <option value="freelance">Freelance</option>
         <option value="personal" selected>Personal</option>
         <option value="otro">Otro</option>
@@ -434,10 +435,10 @@ nav button.on{color:var(--texto);background:var(--panel)}
 
     <label class="campo" id="np-campo-prio" style="display:flex;gap:10px;align-items:center">
       <input type="checkbox" id="np-prioritario" style="width:22px;height:22px;flex:none">
-      <span>Crear como <b style="color:var(--verde)">prioritario</b> (sin peaje; los peajes de otros proyectos apuntarán a él)</span>
+      <span>Crear como <b style="color:var(--verde)">prioritario</b> (sin peaje; solo los tipos Tesis y AI research pueden serlo)</span>
     </label>
     <p class="nota nota-aviso" id="np-nota-primer" style="display:none;margin-bottom:12px">
-      Aún no tienes ningún proyecto prioritario, así que este primero será prioritario obligatoriamente.
+      Aún no tienes ningún proyecto prioritario: el primero debe ser de tipo Tesis o AI research y se creará como prioritario.
     </p>
 
     <!-- Bloque de peaje: solo para proyectos NO prioritarios -->
@@ -446,7 +447,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
       <h3 style="font-size:16px"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg> Peaje de entrada</h3>
       <p class="nota" style="margin-bottom:12px">
         Este proyecto nacerá <b>bloqueado</b>. Solo se desbloqueará cuando acumules las
-        horas de peaje en el prioritario que elijas, contadas desde hoy.
+        horas de peaje trabajando en tus proyectos prioritarios, contadas desde hoy.
         <b style="color:var(--ambar)">El peaje no se puede editar ni borrar después.</b>
       </p>
       <label class="campo"><span class="et">¿En qué consiste? (para que la IA pueda estimar)</span>
@@ -456,13 +457,12 @@ nav button.on{color:var(--texto);background:var(--panel)}
       <label class="campo"><span class="et">Tu estimación de duración (días)</span>
         <input type="number" id="np-dias" min="1" max="3650" step="1" placeholder="10" inputmode="numeric">
       </label>
-      <label class="campo"><span class="et">Pagar el peaje trabajando en…</span>
-        <select id="np-objetivo"></select>
-      </label>
       <p class="nota" id="np-info-peaje" style="margin-bottom:12px">
         La IA hará su propia estimación de duración <b>sin ver la tuya</b>, y la duración
         final será la <b>media de las dos</b>. El peaje será de 1.5h por día de esa media…
         salvo que la ruleta decida que hoy es tu día de suerte y lo deje en 1 hora.
+        Se paga trabajando en tus prioritarios: <b>1h de tesis descuenta 1h</b>;
+        <b>1h de AI research descuenta 45 min</b>.
       </p>
       <p class="nota nota-aviso" id="np-sin-ia" style="display:none;margin-bottom:12px">
         No hay clave de OpenRouter configurada (Ajustes → IA), así que se usará solo tu estimación.
@@ -503,11 +503,20 @@ var NOMBRE_ESTADO = {
   prioritario:'Prioritario', activo:'Activo', bloqueado:'Bloqueado',
   pausado:'Pausado', terminado:'Terminado'
 };
-var NOMBRE_TIPO = { tesis:'Tesis', freelance:'Freelance', personal:'Personal', otro:'Otro' };
+var NOMBRE_TIPO = { tesis:'Tesis', airesearch:'AI research', freelance:'Freelance', personal:'Personal', otro:'Otro' };
+// Tipos que pueden ser prioritarios (y en los que se paga peaje)
+var TIPOS_PRIORITARIOS = ['tesis', 'airesearch'];
+// Cambio de moneda del peaje: 1.5h de tesis equivalen a 2h de AI research,
+// así que cada hora que no sea de tesis descuenta solo 0.75h de peaje
+var FACTOR_NO_TESIS = 1.5 / 2;
+
+function puedeSerPrioritario(tipo){
+  return TIPOS_PRIORITARIOS.indexOf(tipo) !== -1;
+}
 
 /* ---------------- Estado en memoria ----------------
    estado.proyectos: [{id, nombre, tipo, estado, avance, creadoEn,
-                       peaje:{horas, horasBase, dias, objetivoId} | null}]
+                       peaje:{horas, horasBase, dias, ...} | null}]
    estado.sesiones:  [{id, proyectoId, fecha:'YYYY-MM-DD', horas, prioritario, manual}]
    estado.crono:     {proyectoId, inicio(ms)} | null
 ----------------------------------------------------- */
@@ -636,14 +645,19 @@ function proyectosRegistrables(){
   });
 }
 
-// Horas de peaje ya pagadas para un proyecto bloqueado:
-// sesiones en su prioritario objetivo con fecha >= fecha de creación del bloqueado
+// Horas de peaje ya pagadas para un proyecto bloqueado: cuentan las sesiones
+// en CUALQUIER proyecto prioritario desde la creación del bloqueado, con
+// cambio de moneda: 1h de tesis descuenta 1h; 1h de AI research (u otro
+// prioritario), 0.75h (porque 1.5h de tesis ≡ 2h de AI research).
 function horasPeajePagadas(p){
   if (!p.peaje) return 0;
   var desde = p.creadoEn.slice(0,10);
   var total = 0;
   estado.sesiones.forEach(function(s){
-    if (s.proyectoId === p.peaje.objetivoId && s.fecha >= desde) total += s.horas;
+    if (!s.prioritario || s.fecha < desde) return;
+    // El tipo se guarda en la sesión; para sesiones antiguas se mira el proyecto
+    var tipoSesion = s.tipo || (proyecto(s.proyectoId) ? proyecto(s.proyectoId).tipo : 'tesis');
+    total += s.horas * (tipoSesion === 'tesis' ? 1 : FACTOR_NO_TESIS);
   });
   return total;
 }
@@ -699,6 +713,7 @@ function registrarSesion(proyectoId, horas, fecha, manual){
   estado.sesiones.push({
     id: uid(), proyectoId: proyectoId, fecha: fecha,
     horas: Math.round(horas*100)/100, prioritario: p.estado === 'prioritario',
+    tipo: p.tipo,     // para el cambio de moneda del peaje (tesis vale más)
     manual: !!manual
   });
 
@@ -829,13 +844,12 @@ function renderPanel(){
     bloqueados.forEach(function(p){
       var pagadas = horasPeajePagadas(p);
       var pct = Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
-      var objetivo = proyecto(p.peaje.objetivoId);
       html2 += '<div class="peaje-fila">' +
         '<div class="peaje-cab"><b>' + ico('lock') + ' ' + esc(p.nombre) + '</b><span>' + fmtHoras(pagadas) + ' / ' + fmtHoras(p.peaje.horas) + '</span></div>' +
         '<div class="barra ' + (pct >= 100 ? 'barra-verde' : 'barra-ambar') + '"><div style="width:' + pct + '%"></div></div>' +
         '<div class="peaje-det">' + (pct >= 100
             ? 'Peaje completado: desbloquéalo desde Proyectos'
-            : 'Se paga trabajando en «' + (objetivo ? esc(objetivo.nombre) : '¿?') + '» · ' + pct + '%') +
+            : 'Se paga en prioritarios (1h tesis = 1h · 1h AI research = 45 min) · ' + pct + '%') +
         '</div></div>';
     });
     lp.innerHTML = html2;
@@ -873,7 +887,6 @@ function tarjetaProyecto(p){
     // Proyecto bloqueado: gris, sin acciones salvo desbloquear (si toca) o borrar (con castigo)
     var pagadas = horasPeajePagadas(p);
     var pct = Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
-    var objetivo = proyecto(p.peaje.objetivoId);
     var penalizado = p.peaje.horas > p.peaje.horasBase + 0.001;
     // Desglose de la estimación: la tuya, la de la IA y la media (o suerte)
     if (p.peaje.suerte){
@@ -881,8 +894,7 @@ function tarjetaProyecto(p){
     } else if (p.peaje.diasIA){
       h += '<div class="proy-avance">Duración: tú ' + p.peaje.diasUsuario + 'd · IA ' + p.peaje.diasIA + 'd → media ' + p.peaje.dias + 'd</div>';
     }
-    h += '<div class="proy-avance">Peaje: ' + fmtHoras(pagadas) + ' / ' + fmtHoras(p.peaje.horas) +
-         ' en «' + (objetivo ? esc(objetivo.nombre) : '¿?') + '»' +
+    h += '<div class="proy-avance">Peaje: ' + fmtHoras(pagadas) + ' / ' + fmtHoras(p.peaje.horas) + ' en prioritarios' +
          (penalizado ? ' <span style="color:var(--rojo)">(+' + fmtHoras(p.peaje.horas - p.peaje.horasBase) + ' por penalizaciones)</span>' : '') +
          '</div>' +
          '<div class="barra ' + (pct >= 100 ? 'barra-verde' : 'barra-gris') + '"><div style="width:' + pct + '%"></div></div>';
@@ -1018,33 +1030,13 @@ function reactivar(p){
   toast('«' + p.nombre + '» reactivado.');
 }
 
-// Bloqueados que dependen del peaje de un prioritario concreto
-function dependientesDe(prioritarioId){
-  return porEstado('bloqueado').filter(function(b){
-    return b.peaje && b.peaje.objetivoId === prioritarioId;
-  });
-}
-
-// Terminar un proyecto. Si es prioritario con peajes apuntándole,
-// hay que transferirlos a otro prioritario (o no se puede terminar).
+// Terminar un proyecto. El último prioritario no se puede terminar si quedan
+// bloqueados: sus peajes se pagan trabajando en prioritarios y quedarían atascados.
 function terminar(p){
   if (p.estado === 'prioritario'){
-    var deps = dependientesDe(p.id);
-    if (deps.length > 0){
-      var otros = porEstado('prioritario').filter(function(x){ return x.id !== p.id; });
-      if (otros.length === 0){
-        toast('No puedes terminarlo: ' + deps.length + ' proyecto(s) bloqueado(s) pagan su peaje trabajando en este y no hay otro prioritario al que transferirlos.', 6000);
-        return;
-      }
-      var destino = otros[0];
-      confirmar('Terminar «' + p.nombre + '»',
-        deps.length + ' proyecto(s) bloqueado(s) pagan su peaje en este prioritario.\n\nSus peajes pasarán a pagarse trabajando en «' + destino.nombre + '» (el progreso se recalculará contra ese proyecto).',
-        'Terminar y transferir', false, function(){
-          deps.forEach(function(b){ b.peaje.objetivoId = destino.id; });
-          p.estado = 'terminado'; p.avance = 100;
-          guardar(); render();
-          toast('«' + p.nombre + '» terminado. Peajes transferidos.');
-        });
+    var otros = porEstado('prioritario').filter(function(x){ return x.id !== p.id; });
+    if (otros.length === 0 && porEstado('bloqueado').length > 0){
+      toast('No puedes terminarlo: es tu único prioritario y los proyectos bloqueados pagan su peaje trabajando en prioritarios.', 6000);
       return;
     }
   }
@@ -1076,25 +1068,13 @@ function borrarBloqueado(p){
   });
 }
 
-// Borrado sin castigo (terminados, activos, pausados, prioritarios sin dependientes)
+// Borrado sin castigo (terminados, activos, pausados y prioritarios,
+// salvo el último prioritario si quedan bloqueados por desbloquear)
 function borrarSimple(p){
   if (p.estado === 'prioritario'){
-    var deps = dependientesDe(p.id);
-    if (deps.length > 0){
-      var otros = porEstado('prioritario').filter(function(x){ return x.id !== p.id; });
-      if (otros.length === 0){
-        toast('No puedes borrarlo: ' + deps.length + ' proyecto(s) bloqueado(s) dependen de su peaje y no hay otro prioritario.', 6000);
-        return;
-      }
-      var destino = otros[0];
-      confirmar('Borrar «' + p.nombre + '»',
-        'Sus sesiones se borrarán y los peajes que apuntaban a él pasarán a pagarse en «' + destino.nombre + '».',
-        'Borrar', true, function(){
-          deps.forEach(function(b){ b.peaje.objetivoId = destino.id; });
-          eliminarProyecto(p.id);
-          guardar(); render();
-          toast('Proyecto borrado.');
-        });
+    var otros = porEstado('prioritario').filter(function(x){ return x.id !== p.id; });
+    if (otros.length === 0 && porEstado('bloqueado').length > 0){
+      toast('No puedes borrarlo: es tu único prioritario y los proyectos bloqueados pagan su peaje trabajando en prioritarios.', 6000);
       return;
     }
   }
@@ -1186,8 +1166,8 @@ function estimarConIA(nombre, tipo, descripcion){
       if (!isFinite(dias) || dias < 1) return { dias:null, error:'el modelo dio una respuesta sin sentido' };
       // Techo de seguridad: los proyectos que no son de tesis/investigación se
       // hacen con ayuda de IA y rara vez pasan de ~2 semanas; si el modelo se
-      // dispara, se recorta para que no infle el peaje. Las tesis van aparte.
-      var techo = (tipo === 'tesis') ? 730 : 14;
+      // dispara, se recorta para que no infle el peaje. Tesis e investigación van aparte.
+      var techo = puedeSerPrioritario(tipo) ? 730 : 14;
       return { dias: Math.min(dias, techo), error:null };
     });
   }).catch(function(e){
@@ -1260,36 +1240,44 @@ function alternarDictado(){
 /* ================= NUEVO PROYECTO ================= */
 
 function abrirNuevoProyecto(){
-  var prios = porEstado('prioritario');
-  var chk = document.getElementById('np-prioritario');
-  var notaPrimer = document.getElementById('np-nota-primer');
-
-  // Si no hay ningún prioritario, el primero tiene que serlo a la fuerza
-  if (prios.length === 0){
-    chk.checked = true;
-    chk.disabled = true;
-    notaPrimer.style.display = 'block';
-  } else {
-    chk.checked = false;
-    chk.disabled = false;
-    notaPrimer.style.display = 'none';
-  }
-
-  // Rellenar el selector de prioritarios para el peaje
-  document.getElementById('np-objetivo').innerHTML = prios.map(function(p){
-    return '<option value="' + p.id + '">' + esc(p.nombre) + '</option>';
-  }).join('');
+  var sinPrios = porEstado('prioritario').length === 0;
 
   document.getElementById('np-nombre').value = '';
   document.getElementById('np-desc').value = '';
   document.getElementById('np-dias').value = '';
+  // Si aún no hay prioritarios, guiamos: el primero debe ser tesis o AI research
+  document.getElementById('np-tipo').value = sinPrios ? 'tesis' : 'personal';
   // El botón de dictado solo aparece si el navegador soporta reconocimiento de voz
   document.getElementById('np-dictar').style.display = Reconocedor ? '' : 'none';
   // Sin clave de OpenRouter avisamos de que solo contará tu estimación
   document.getElementById('np-sin-ia').style.display =
     (estado.config.orClave || '').trim() ? 'none' : 'block';
-  actualizarBloquePeaje();
+  actualizarOpcionesPrioritario();
   document.getElementById('velo-nuevo').classList.add('visible');
+}
+
+// El checkbox de prioritario solo existe para los tipos que pueden serlo
+// (tesis y AI research); para el resto se oculta. Si todavía no hay ningún
+// prioritario, el primero se fuerza a serlo.
+function actualizarOpcionesPrioritario(){
+  var tipo = document.getElementById('np-tipo').value;
+  var permitido = puedeSerPrioritario(tipo);
+  var sinPrios = porEstado('prioritario').length === 0;
+  var chk = document.getElementById('np-prioritario');
+
+  document.getElementById('np-campo-prio').style.display = permitido ? 'flex' : 'none';
+  document.getElementById('np-nota-primer').style.display = sinPrios ? 'block' : 'none';
+
+  if (!permitido){
+    chk.checked = false;
+    chk.disabled = false;
+  } else if (sinPrios){
+    chk.checked = true;
+    chk.disabled = true;
+  } else {
+    chk.disabled = false;
+  }
+  actualizarBloquePeaje();
 }
 
 function cerrarNuevoProyecto(){
@@ -1312,6 +1300,14 @@ function intentarCrearProyecto(){
   var descripcion = document.getElementById('np-desc').value.trim();
 
   if (!nombre){ toast('Ponle un nombre al proyecto.'); return; }
+  if (esPrio && !puedeSerPrioritario(tipo)){
+    toast('Solo los proyectos de tipo Tesis o AI research pueden ser prioritarios.');
+    return;
+  }
+  if (!esPrio && porEstado('prioritario').length === 0){
+    toast('Crea primero un proyecto prioritario (Tesis o AI research): los peajes se pagan trabajando en él.', 5000);
+    return;
+  }
 
   var sinTerminar = estado.proyectos.filter(function(p){ return p.estado !== 'terminado'; }).length;
 
@@ -1326,9 +1322,7 @@ function intentarCrearProyecto(){
   }
 
   var diasUsuario = parseInt(document.getElementById('np-dias').value, 10);
-  var objetivoId = document.getElementById('np-objetivo').value;
   if (!diasUsuario || diasUsuario < 1){ toast('Indica tu estimación de duración en días.'); return; }
-  if (!objetivoId || !proyecto(objetivoId)){ toast('Elige el prioritario donde pagarás el peaje.'); return; }
 
   // Pedir la estimación independiente a la IA (el botón avisa mientras tanto)
   var btn = document.getElementById('np-crear');
@@ -1355,7 +1349,8 @@ function intentarCrearProyecto(){
 
     var msj = 'Tienes ' + sinTerminar + ' proyecto(s) sin terminar. ¿Seguro?\n\n' +
       desglose + '\n\n«' + nombre + '» nacerá BLOQUEADO con un peaje de ' + peajeHoras +
-      'h en «' + proyecto(objetivoId).nombre + '», contadas desde hoy.\n\n' +
+      'h, contadas desde hoy trabajando en tus prioritarios ' +
+      '(1h de tesis = 1h de peaje; 1h de AI research = 45 min).\n\n' +
       'El peaje NO se podrá editar ni borrar.';
 
     confirmar('Un momento…', msj, 'Sí, crearlo bloqueado', false, function(){
@@ -1368,7 +1363,6 @@ function intentarCrearProyecto(){
         dias: diasFinales,         // duración final (media)
         diasUsuario: diasUsuario,  // lo que estimaste tú
         diasIA: diasIA,            // lo que estimó la IA (null si no pudo)
-        objetivoId: objetivoId,    // prioritario donde se paga
         suerte: suerte             // si tocó la ruleta
       });
       if (suerte){
@@ -1376,8 +1370,8 @@ function intentarCrearProyecto(){
         setTimeout(function(){
           avisar('¡Ha tocado la ruleta!',
             'Hoy es tu día de suerte: el peaje de «' + nombre + '» se queda en SOLO ' +
-            HORAS_SUERTE + ' hora en «' + (proyecto(objetivoId) ? proyecto(objetivoId).nombre : '¿?') +
-            '».\n\nUna horita y a por el proyecto nuevo.', '¡Toma ya!');
+            HORAS_SUERTE + ' hora de trabajo en un prioritario.\n\n' +
+            'Una horita y a por el proyecto nuevo.', '¡Toma ya!');
         }, 250);
       }
     });
@@ -1559,6 +1553,7 @@ function conectarEventos(){
   document.getElementById('np-cancelar').addEventListener('click', cerrarNuevoProyecto);
   document.getElementById('np-crear').addEventListener('click', intentarCrearProyecto);
   document.getElementById('np-prioritario').addEventListener('change', actualizarBloquePeaje);
+  document.getElementById('np-tipo').addEventListener('change', actualizarOpcionesPrioritario);
   document.getElementById('np-dictar').addEventListener('click', alternarDictado);
 
   // Modal de confirmación genérico
