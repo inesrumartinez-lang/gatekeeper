@@ -37,6 +37,8 @@
   --rojo-osc:#4a2723;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* Iconos Feather (librería minimalista de trazo, licencia ISC) embebidos como sprite */
+.ico{width:1.05em;height:1.05em;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-0.16em;display:inline-block;flex:none}
 html{-webkit-text-size-adjust:100%}
 body{
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
@@ -67,7 +69,7 @@ header h1 span{color:var(--verde)}
   color:#f0d9d5;font-weight:600;font-size:15px;
   display:flex;gap:10px;align-items:center;
 }
-.banner-rojo .ico{font-size:22px;flex:none}
+.banner-rojo .ico{width:22px;height:22px}
 
 /* ---------- Botones (grandes, para usar con el pulgar) ---------- */
 .btn{
@@ -177,7 +179,7 @@ nav button{
   display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;
   border-radius:12px;min-height:56px;
 }
-nav button .ni{font-size:23px;line-height:1}
+nav button .ni{width:22px;height:22px}
 nav button.on{color:var(--texto);background:var(--panel)}
 
 /* ---------- Vistas (pestañas) ---------- */
@@ -230,6 +232,33 @@ nav button.on{color:var(--texto);background:var(--panel)}
 </style>
 </head>
 <body>
+<!-- Sprite de iconos: subconjunto de Feather Icons (feathericons.com, licencia ISC).
+     Embebido para que la app siga siendo un único archivo y funcione offline. -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-unlock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-danger" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+</svg>
 <div class="cont">
 
   <!-- ============ PANTALLA DE ERROR DE DATOS ============ -->
@@ -237,19 +266,19 @@ nav button.on{color:var(--texto);background:var(--panel)}
   <div id="pantalla-error">
     <header><h1>Gatekeeper<span>.</span></h1></header>
     <div class="crd">
-      <h2>⚠️ Problema con tus datos</h2>
+      <h2><svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg> Problema con tus datos</h2>
       <p style="font-size:15px;margin-bottom:14px">
         No he podido leer los datos guardados en este dispositivo. Puede que se hayan
         dañado o que el navegador los haya borrado. Tranquilidad: aquí abajo puedes
         rescatar lo que quede, importar una copia de seguridad, o empezar de cero.
       </p>
-      <button class="btn btn-borde" id="btn-rescatar" style="margin-bottom:10px">⬇️ Descargar lo que se pueda rescatar</button>
+      <button class="btn btn-borde" id="btn-rescatar" style="margin-bottom:10px"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Descargar lo que se pueda rescatar</button>
       <hr class="sep">
       <label class="campo"><span class="et">Pega aquí tu copia de seguridad (JSON)</span>
         <textarea id="txt-rescate" rows="4" placeholder='{"proyectos":[...]}'></textarea>
       </label>
-      <button class="btn btn-azul" id="btn-importar-rescate" style="margin-bottom:10px">📥 Importar copia</button>
-      <button class="btn btn-rojo" id="btn-cero">🗑️ Empezar de cero</button>
+      <button class="btn btn-azul" id="btn-importar-rescate" style="margin-bottom:10px"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Importar copia</button>
+      <button class="btn btn-rojo" id="btn-cero"><svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg> Empezar de cero</button>
     </div>
   </div>
 
@@ -266,7 +295,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
       <div id="zona-banner"></div>
 
       <div class="crd racha-crd">
-        <h2>🔥 Racha en prioritarios</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-flame"/></svg> Racha en prioritarios</h2>
         <div class="racha">
           <div class="num" id="racha-num">0</div>
           <div class="txt" id="racha-txt">días consecutivos trabajando en proyectos prioritarios</div>
@@ -274,16 +303,16 @@ nav button.on{color:var(--texto);background:var(--panel)}
       </div>
 
       <div class="crd">
-        <h2>📊 Horas de esta semana</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg> Horas de esta semana</h2>
         <div id="grafico-semana"></div>
       </div>
 
       <div class="crd">
-        <h2>🚧 Peajes pendientes</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg> Peajes pendientes</h2>
         <div id="lista-peajes"></div>
       </div>
 
-      <button class="btn btn-verde" id="btn-ir-crono">▶ &nbsp;Ponerme a trabajar</button>
+      <button class="btn btn-verde" id="btn-ir-crono"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg> Ponerme a trabajar</button>
     </section>
 
     <!-- ============ VISTA: PROYECTOS ============ -->
@@ -294,17 +323,17 @@ nav button.on{color:var(--texto);background:var(--panel)}
     <!-- ============ VISTA: TIEMPO ============ -->
     <section class="vista" id="vista-tiempo">
       <div class="crd" id="crd-crono">
-        <h2>⏱ Cronómetro</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg> Cronómetro</h2>
         <label class="campo" id="campo-crono-proy"><span class="et">Proyecto</span>
           <select id="sel-crono"></select>
         </label>
         <div class="crono-tiempo" id="crono-tiempo">0:00:00</div>
         <div class="crono-proy" id="crono-etiqueta"></div>
-        <button class="btn btn-verde" id="btn-crono">▶ &nbsp;Empezar</button>
+        <button class="btn btn-verde" id="btn-crono"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg> Empezar</button>
       </div>
 
       <div class="crd">
-        <h2>✍️ Entrada manual</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg> Entrada manual</h2>
         <label class="campo"><span class="et">Proyecto</span>
           <select id="sel-manual"></select>
         </label>
@@ -319,7 +348,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
       </div>
 
       <div class="crd">
-        <h2>🗓 Últimas sesiones</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-calendar"/></svg> Últimas sesiones</h2>
         <div id="lista-sesiones"></div>
       </div>
     </section>
@@ -327,7 +356,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
     <!-- ============ VISTA: AJUSTES ============ -->
     <section class="vista" id="vista-ajustes">
       <div class="crd">
-        <h2>🤖 IA para estimaciones (OpenRouter)</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-cpu"/></svg> IA para estimaciones (OpenRouter)</h2>
         <p class="nota" style="margin-bottom:12px">
           Al crear un proyecto, un modelo de IA estima su duración por su cuenta y se hace la
           media con la tuya. Consigue una clave gratuita en <b>openrouter.ai/keys</b>.
@@ -346,16 +375,16 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <p class="nota" id="aj-estado-ia" style="margin-top:10px"></p>
       </div>
       <div class="crd">
-        <h2>💾 Copia de seguridad</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-save"/></svg> Copia de seguridad</h2>
         <p class="nota" style="margin-bottom:12px">Todos tus datos viven solo en este dispositivo. Haz copias de vez en cuando.</p>
-        <button class="btn btn-borde" id="btn-exportar" style="margin-bottom:10px">⬆️ Exportar copia (JSON)</button>
+        <button class="btn btn-borde" id="btn-exportar" style="margin-bottom:10px"><svg class="ico" aria-hidden="true"><use href="#i-upload"/></svg> Exportar copia (JSON)</button>
         <label class="campo"><span class="et">Importar: pega aquí el JSON de una copia</span>
           <textarea id="txt-importar" rows="3" placeholder='{"proyectos":[...]}'></textarea>
         </label>
-        <button class="btn btn-azul" id="btn-importar">📥 Importar copia</button>
+        <button class="btn btn-azul" id="btn-importar"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Importar copia</button>
       </div>
       <div class="crd">
-        <h2>☠️ Zona de peligro</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
       <p class="nota" style="text-align:center">Gatekeeper v1 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
@@ -369,10 +398,10 @@ nav button.on{color:var(--texto);background:var(--panel)}
 
 <!-- ============ NAVEGACIÓN INFERIOR ============ -->
 <nav>
-  <button data-vista="panel" class="on"><span class="ni">🏠</span>Panel</button>
-  <button data-vista="proyectos"><span class="ni">📁</span>Proyectos</button>
-  <button data-vista="tiempo"><span class="ni">⏱</span>Tiempo</button>
-  <button data-vista="ajustes"><span class="ni">⚙️</span>Ajustes</button>
+  <button data-vista="panel" class="on"><svg class="ico ni" aria-hidden="true"><use href="#i-home"/></svg>Panel</button>
+  <button data-vista="proyectos"><svg class="ico ni" aria-hidden="true"><use href="#i-folder"/></svg>Proyectos</button>
+  <button data-vista="tiempo"><svg class="ico ni" aria-hidden="true"><use href="#i-clock"/></svg>Tiempo</button>
+  <button data-vista="ajustes"><svg class="ico ni" aria-hidden="true"><use href="#i-settings"/></svg>Ajustes</button>
 </nav>
 
 <!-- ============ MODAL GENÉRICO (confirmaciones) ============ -->
@@ -414,7 +443,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
     <!-- Bloque de peaje: solo para proyectos NO prioritarios -->
     <div id="np-bloque-peaje">
       <hr class="sep">
-      <h3 style="font-size:16px">🚧 Peaje de entrada</h3>
+      <h3 style="font-size:16px"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg> Peaje de entrada</h3>
       <p class="nota" style="margin-bottom:12px">
         Este proyecto nacerá <b>bloqueado</b>. Solo se desbloqueará cuando acumules las
         horas de peaje en el prioritario que elijas, contadas desde hoy.
@@ -422,7 +451,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
       </p>
       <label class="campo"><span class="et">¿En qué consiste? (para que la IA pueda estimar)</span>
         <textarea id="np-desc" rows="3" placeholder="Ej.: montar un podcast quincenal: comprar micros, grabar dos pilotos y publicarlos"></textarea>
-        <button type="button" class="btn btn-borde btn-chico" id="np-dictar" style="margin-top:8px">🎤 Dictar descripción</button>
+        <button type="button" class="btn btn-borde btn-chico" id="np-dictar" style="margin-top:8px"><svg class="ico" aria-hidden="true"><use href="#i-mic"/></svg> Dictar descripción</button>
       </label>
       <label class="campo"><span class="et">Tu estimación de duración (días)</span>
         <input type="number" id="np-dias" min="1" max="3650" step="1" placeholder="10" inputmode="numeric">
@@ -433,10 +462,10 @@ nav button.on{color:var(--texto);background:var(--panel)}
       <p class="nota" id="np-info-peaje" style="margin-bottom:12px">
         La IA hará su propia estimación de duración <b>sin ver la tuya</b>, y la duración
         final será la <b>media de las dos</b>. El peaje será de 1.5h por día de esa media…
-        salvo que la ruleta 🎰 decida que hoy es tu día de suerte y lo deje en 1 hora.
+        salvo que la ruleta decida que hoy es tu día de suerte y lo deje en 1 hora.
       </p>
       <p class="nota nota-aviso" id="np-sin-ia" style="display:none;margin-bottom:12px">
-        ⚠️ No hay clave de OpenRouter configurada (Ajustes → IA), así que se usará solo tu estimación.
+        No hay clave de OpenRouter configurada (Ajustes → IA), así que se usará solo tu estimación.
       </p>
     </div>
 
@@ -466,7 +495,7 @@ var MAX_ACTIVOS = 3;                     // máximo de proyectos activos a la ve
 var HORAS_POR_DIA = 1.5;                 // mínimo sugerido de peaje por día estimado
 var DIAS_AVISO = 5;                      // días sin prioritario antes del banner rojo
 var PENALIZACION = 0.25;                 // +25% de peaje al borrar un bloqueado
-var PROB_SUERTE = 0.10;                  // probabilidad de que la ruleta 🎰 toque (1 de cada 10)
+var PROB_SUERTE = 0.10;                  // probabilidad de que la ruleta toque (1 de cada 10)
 var HORAS_SUERTE = 1;                    // peaje reducido cuando toca la suerte
 var MODELO_DEFECTO = 'deepseek/deepseek-chat-v3-0324:free';   // modelo gratuito inicial (editable en Ajustes)
 
@@ -532,6 +561,11 @@ function fmtFecha(clave){
 
 function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
+// Icono del sprite Feather para HTML generado dinámicamente
+function ico(nombre){
+  return '<svg class="ico" aria-hidden="true"><use href="#i-' + nombre + '"/></svg>';
+}
+
 // Escapa texto para meterlo en HTML sin sustos
 function esc(t){
   return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -579,7 +613,7 @@ function guardar(){
   try {
     localStorage.setItem(CLAVE_DATOS, JSON.stringify(estado));
   } catch(e){
-    toast('⚠️ No se han podido guardar los datos (puede que el almacenamiento esté lleno o bloqueado). Exporta una copia desde Ajustes cuanto antes.', 6000);
+    toast('No se han podido guardar los datos (puede que el almacenamiento esté lleno o bloqueado). Exporta una copia desde Ajustes cuanto antes.', 6000);
   }
 }
 
@@ -658,7 +692,7 @@ function registrarSesion(proyectoId, horas, fecha, manual){
   var p = proyecto(proyectoId);
   if (!p) { toast('Ese proyecto ya no existe.'); return false; }
   if (p.estado !== 'prioritario' && p.estado !== 'activo'){
-    toast('🚫 Solo puedes registrar tiempo en proyectos prioritarios o activos.');
+    toast('Solo puedes registrar tiempo en proyectos prioritarios o activos.');
     return false;
   }
   // Guardamos si la sesión fue en un prioritario (para racha y banner)
@@ -675,9 +709,9 @@ function registrarSesion(proyectoId, horas, fecha, manual){
   });
   guardar();
   if (desbloqueables.length > 0){
-    toast('🔓 ¡Peaje pagado! Ya puedes desbloquear: ' + desbloqueables.join(', '), 5000);
+    toast('¡Peaje pagado! Ya puedes desbloquear: ' + desbloqueables.join(', '), 5000);
   } else {
-    toast('✅ ' + fmtHoras(horas) + ' registradas en «' + p.nombre + '»');
+    toast(fmtHoras(horas) + ' registradas en «' + p.nombre + '»');
   }
   return true;
 }
@@ -732,7 +766,7 @@ function renderBanner(){
   var dias = diasSinPrioritario();
   if (dias !== null && dias > DIAS_AVISO){
     zona.innerHTML =
-      '<div class="banner-rojo"><span class="ico">🚨</span><span>Llevas <b>' + dias +
+      '<div class="banner-rojo">' + ico('alert') + '<span>Llevas <b>' + dias +
       ' días</b> sin registrar horas en un proyecto prioritario. Los peajes no se pagan solos.</span></div>';
   } else {
     zona.innerHTML = '';
@@ -797,10 +831,10 @@ function renderPanel(){
       var pct = Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
       var objetivo = proyecto(p.peaje.objetivoId);
       html2 += '<div class="peaje-fila">' +
-        '<div class="peaje-cab"><b>🔒 ' + esc(p.nombre) + '</b><span>' + fmtHoras(pagadas) + ' / ' + fmtHoras(p.peaje.horas) + '</span></div>' +
+        '<div class="peaje-cab"><b>' + ico('lock') + ' ' + esc(p.nombre) + '</b><span>' + fmtHoras(pagadas) + ' / ' + fmtHoras(p.peaje.horas) + '</span></div>' +
         '<div class="barra ' + (pct >= 100 ? 'barra-verde' : 'barra-ambar') + '"><div style="width:' + pct + '%"></div></div>' +
         '<div class="peaje-det">' + (pct >= 100
-            ? '✅ Peaje completado: desbloquéalo desde Proyectos'
+            ? 'Peaje completado: desbloquéalo desde Proyectos'
             : 'Se paga trabajando en «' + (objetivo ? esc(objetivo.nombre) : '¿?') + '» · ' + pct + '%') +
         '</div></div>';
     });
@@ -843,7 +877,7 @@ function tarjetaProyecto(p){
     var penalizado = p.peaje.horas > p.peaje.horasBase + 0.001;
     // Desglose de la estimación: la tuya, la de la IA y la media (o suerte)
     if (p.peaje.suerte){
-      h += '<div class="proy-avance" style="color:var(--verde)">🎰 ¡Tocó la ruleta! Peaje de suerte: solo ' + fmtHoras(p.peaje.horasBase) + '</div>';
+      h += '<div class="proy-avance" style="color:var(--verde)">' + ico('zap') + ' ¡Tocó la ruleta! Peaje de suerte: solo ' + fmtHoras(p.peaje.horasBase) + '</div>';
     } else if (p.peaje.diasIA){
       h += '<div class="proy-avance">Duración: tú ' + p.peaje.diasUsuario + 'd · IA ' + p.peaje.diasIA + 'd → media ' + p.peaje.dias + 'd</div>';
     }
@@ -854,14 +888,14 @@ function tarjetaProyecto(p){
          '<div class="barra ' + (pct >= 100 ? 'barra-verde' : 'barra-gris') + '"><div style="width:' + pct + '%"></div></div>';
     h += '<div class="proy-acciones">';
     if (pct >= 100){
-      h += '<button class="btn btn-verde btn-chico" data-accion="desbloquear">🔓 Desbloquear</button>';
+      h += '<button class="btn btn-verde btn-chico" data-accion="desbloquear">' + ico('unlock') + ' Desbloquear</button>';
     }
-    h += '<button class="btn btn-borde btn-chico" data-accion="borrar-bloqueado" style="color:var(--rojo)">🗑 Borrar (+25% al resto)</button>';
+    h += '<button class="btn btn-borde btn-chico" data-accion="borrar-bloqueado" style="color:var(--rojo)">' + ico('trash') + ' Borrar (+25% al resto)</button>';
     h += '</div>';
 
   } else if (p.estado === 'terminado'){
     h += '<div class="proy-avance">Avance final: ' + p.avance + '%</div>' +
-         '<div class="proy-acciones"><button class="btn btn-borde btn-chico" data-accion="borrar-simple">🗑 Borrar</button></div>';
+         '<div class="proy-acciones"><button class="btn btn-borde btn-chico" data-accion="borrar-simple">' + ico('trash') + ' Borrar</button></div>';
 
   } else {
     // prioritario / activo / pausado: avance editable y acciones
@@ -871,13 +905,13 @@ function tarjetaProyecto(p){
          '<input type="range" min="0" max="100" step="5" value="' + p.avance + '" data-accion="avance" aria-label="Avance">';
     h += '<div class="proy-acciones">';
     if (p.estado === 'activo'){
-      h += '<button class="btn btn-borde btn-chico" data-accion="pausar">⏸ Pausar</button>';
+      h += '<button class="btn btn-borde btn-chico" data-accion="pausar">' + ico('pause') + ' Pausar</button>';
     }
     if (p.estado === 'pausado'){
-      h += '<button class="btn btn-azul btn-chico" data-accion="reactivar">▶ Reactivar</button>';
+      h += '<button class="btn btn-azul btn-chico" data-accion="reactivar">' + ico('play') + ' Reactivar</button>';
     }
-    h += '<button class="btn btn-borde btn-chico" data-accion="terminar">🏁 Terminar</button>';
-    h += '<button class="btn btn-borde btn-chico" data-accion="borrar-simple" style="color:var(--rojo)">🗑</button>';
+    h += '<button class="btn btn-borde btn-chico" data-accion="terminar">' + ico('flag') + ' Terminar</button>';
+    h += '<button class="btn btn-borde btn-chico" data-accion="borrar-simple" style="color:var(--rojo)">' + ico('trash') + '</button>';
     h += '</div>';
   }
   h += '</div>';
@@ -888,7 +922,7 @@ function tarjetaProyecto(p){
 function renderTiempo(){
   // Selectores de proyecto (solo prioritarios y activos)
   var opciones = proyectosRegistrables().map(function(p){
-    return '<option value="' + p.id + '">' + (p.estado === 'prioritario' ? '🟢 ' : '🔵 ') + esc(p.nombre) + '</option>';
+    return '<option value="' + p.id + '">' + (p.estado === 'prioritario' ? '● ' : '○ ') + esc(p.nombre) + '</option>';
   }).join('');
   var vacias = '<option value="">— No hay proyectos donde registrar —</option>';
 
@@ -916,9 +950,9 @@ function renderTiempo(){
     var ult = estado.sesiones.slice(-10).reverse();
     lista.innerHTML = ult.map(function(s){
       var p = proyecto(s.proyectoId);
-      return '<div class="ses-fila"><b>' + (s.prioritario ? '🟢 ' : '🔵 ') +
+      return '<div class="ses-fila"><b><span style="color:var(--' + (s.prioritario ? 'verde' : 'azul') + ')">●</span> ' +
              esc(p ? p.nombre : '(borrado)') + '</b>' +
-             '<span class="der">' + fmtHoras(s.horas) + ' · ' + fmtFecha(s.fecha) + (s.manual ? ' ✍️' : '') + '</span></div>';
+             '<span class="der">' + fmtHoras(s.horas) + ' · ' + fmtFecha(s.fecha) + (s.manual ? ' (manual)' : '') + '</span></div>';
     }).join('');
   }
 }
@@ -936,7 +970,7 @@ function renderCrono(){
     crd.classList.add('crono-activo');
     campoSel.style.display = 'none';
     etiqueta.textContent = 'Trabajando en «' + (p ? p.nombre : '¿?') + '»';
-    btn.textContent = '⏹  Parar y guardar';
+    btn.innerHTML = ico('stop') + ' Parar y guardar';
     btn.className = 'btn btn-rojo';
     actualizarTiempoCrono();
     if (!tickCrono) tickCrono = setInterval(actualizarTiempoCrono, 1000);
@@ -945,7 +979,7 @@ function renderCrono(){
     campoSel.style.display = '';
     etiqueta.textContent = '';
     tiempo.textContent = '0:00:00';
-    btn.textContent = '▶  Empezar';
+    btn.innerHTML = ico('play') + ' Empezar';
     btn.className = 'btn btn-verde';
     if (tickCrono){ clearInterval(tickCrono); tickCrono = null; }
   }
@@ -965,23 +999,23 @@ function actualizarTiempoCrono(){
 function desbloquear(p){
   if (!peajeCompleto(p)){ toast('El peaje aún no está pagado.'); return; }
   if (porEstado('activo').length >= MAX_ACTIVOS){
-    toast('🚫 Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes de desbloquear este.', 4500);
+    toast('Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes de desbloquear este.', 4500);
     return;
   }
   p.estado = 'activo';
   guardar(); render();
-  toast('🔓 «' + p.nombre + '» desbloqueado y activo. A por él.');
+  toast('«' + p.nombre + '» desbloqueado y activo. A por él.');
 }
 
 // Reactivar un proyecto pausado (respetando el límite de activos)
 function reactivar(p){
   if (porEstado('activo').length >= MAX_ACTIVOS){
-    toast('🚫 Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes.', 4500);
+    toast('Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes.', 4500);
     return;
   }
   p.estado = 'activo';
   guardar(); render();
-  toast('▶ «' + p.nombre + '» reactivado.');
+  toast('«' + p.nombre + '» reactivado.');
 }
 
 // Bloqueados que dependen del peaje de un prioritario concreto
@@ -999,7 +1033,7 @@ function terminar(p){
     if (deps.length > 0){
       var otros = porEstado('prioritario').filter(function(x){ return x.id !== p.id; });
       if (otros.length === 0){
-        toast('🚫 No puedes terminarlo: ' + deps.length + ' proyecto(s) bloqueado(s) pagan su peaje trabajando en este y no hay otro prioritario al que transferirlos.', 6000);
+        toast('No puedes terminarlo: ' + deps.length + ' proyecto(s) bloqueado(s) pagan su peaje trabajando en este y no hay otro prioritario al que transferirlos.', 6000);
         return;
       }
       var destino = otros[0];
@@ -1009,7 +1043,7 @@ function terminar(p){
           deps.forEach(function(b){ b.peaje.objetivoId = destino.id; });
           p.estado = 'terminado'; p.avance = 100;
           guardar(); render();
-          toast('🏁 «' + p.nombre + '» terminado. Peajes transferidos.');
+          toast('«' + p.nombre + '» terminado. Peajes transferidos.');
         });
       return;
     }
@@ -1019,7 +1053,7 @@ function terminar(p){
     'Terminar', false, function(){
       p.estado = 'terminado'; p.avance = 100;
       guardar(); render();
-      toast('🏁 «' + p.nombre + '» terminado. Uno menos.');
+      toast('«' + p.nombre + '» terminado. Uno menos.');
     });
 }
 
@@ -1030,15 +1064,15 @@ function borrarBloqueado(p){
   aviso += otros.length > 0
     ? ' (afecta a ' + otros.length + ' proyecto(s)).'
     : '. Ahora mismo no hay otros bloqueados, pero que conste.';
-  confirmar('⚠️ Borrar proyecto bloqueado', aviso, 'Borrar y asumir el castigo', true, function(){
+  confirmar('Borrar proyecto bloqueado', aviso, 'Borrar y asumir el castigo', true, function(){
     otros.forEach(function(b){
       b.peaje.horas = Math.round(b.peaje.horas * (1 + PENALIZACION) * 100) / 100;
     });
     eliminarProyecto(p.id);
     guardar(); render();
     toast(otros.length > 0
-      ? '🗑 Borrado. Peajes del resto aumentados un 25%. Te lo advertí.'
-      : '🗑 Borrado.');
+      ? 'Borrado. Peajes del resto aumentados un 25%. Te lo advertí.'
+      : 'Borrado.');
   });
 }
 
@@ -1049,7 +1083,7 @@ function borrarSimple(p){
     if (deps.length > 0){
       var otros = porEstado('prioritario').filter(function(x){ return x.id !== p.id; });
       if (otros.length === 0){
-        toast('🚫 No puedes borrarlo: ' + deps.length + ' proyecto(s) bloqueado(s) dependen de su peaje y no hay otro prioritario.', 6000);
+        toast('No puedes borrarlo: ' + deps.length + ' proyecto(s) bloqueado(s) dependen de su peaje y no hay otro prioritario.', 6000);
         return;
       }
       var destino = otros[0];
@@ -1059,7 +1093,7 @@ function borrarSimple(p){
           deps.forEach(function(b){ b.peaje.objetivoId = destino.id; });
           eliminarProyecto(p.id);
           guardar(); render();
-          toast('🗑 Proyecto borrado.');
+          toast('Proyecto borrado.');
         });
       return;
     }
@@ -1069,7 +1103,7 @@ function borrarSimple(p){
     'Borrar', true, function(){
       eliminarProyecto(p.id);
       guardar(); render();
-      toast('🗑 Proyecto borrado.');
+      toast('Proyecto borrado.');
     });
 }
 
@@ -1198,16 +1232,16 @@ function alternarDictado(){
 
   rec.onerror = function(ev){
     if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed'){
-      toast('🎤 Sin permiso de micrófono. Permítelo cuando el navegador lo pida (o usa el micro del teclado).', 5000);
+      toast('Sin permiso de micrófono. Permítelo cuando el navegador lo pida (o usa el micro del teclado).', 5000);
     } else if (ev.error !== 'aborted' && ev.error !== 'no-speech'){
-      toast('🎤 El dictado falló (' + ev.error + '). Siempre puedes usar el micrófono del teclado.');
+      toast('El dictado falló (' + ev.error + '). Siempre puedes usar el micrófono del teclado.');
     }
   };
 
   // Al terminar (por parar, error o silencio), restaurar el botón
   rec.onend = function(){
     dictado = null;
-    btn.textContent = '🎤 Dictar descripción';
+    btn.innerHTML = ico('mic') + ' Dictar descripción';
     btn.classList.remove('btn-rojo');
     btn.classList.add('btn-borde');
   };
@@ -1215,7 +1249,7 @@ function alternarDictado(){
   try {
     rec.start();
     dictado = rec;
-    btn.textContent = '⏹ Parar dictado';
+    btn.innerHTML = ico('stop') + ' Parar dictado';
     btn.classList.remove('btn-borde');
     btn.classList.add('btn-rojo');
   } catch(e){
@@ -1299,7 +1333,7 @@ function intentarCrearProyecto(){
   // Pedir la estimación independiente a la IA (el botón avisa mientras tanto)
   var btn = document.getElementById('np-crear');
   btn.disabled = true;
-  btn.textContent = '🤖 La IA está evaluando…';
+  btn.innerHTML = ico('cpu') + ' La IA está evaluando…';
 
   estimarConIA(nombre, tipo, descripcion).then(function(resultado){
     btn.disabled = false;
@@ -1325,7 +1359,7 @@ function intentarCrearProyecto(){
       'El peaje NO se podrá editar ni borrar.';
 
     confirmar('Un momento…', msj, 'Sí, crearlo bloqueado', false, function(){
-      // 🎰 La ruleta: muy de vez en cuando, el peaje se queda en 1 hora
+      // La ruleta: muy de vez en cuando, el peaje se queda en 1 hora
       var suerte = Math.random() < PROB_SUERTE;
       var horasFinales = suerte ? HORAS_SUERTE : peajeHoras;
       crearProyecto(nombre, tipo, descripcion, false, {
@@ -1340,7 +1374,7 @@ function intentarCrearProyecto(){
       if (suerte){
         // Avisar de la suerte después de cerrar el modal de creación
         setTimeout(function(){
-          avisar('🎰 ¡Ha tocado la ruleta!',
+          avisar('¡Ha tocado la ruleta!',
             'Hoy es tu día de suerte: el peaje de «' + nombre + '» se queda en SOLO ' +
             HORAS_SUERTE + ' hora en «' + (proyecto(objetivoId) ? proyecto(objetivoId).nombre : '¿?') +
             '».\n\nUna horita y a por el proyecto nuevo.', '¡Toma ya!');
@@ -1363,8 +1397,8 @@ function crearProyecto(nombre, tipo, descripcion, esPrio, peaje){
   cerrarNuevoProyecto();
   render();
   toast(esPrio
-    ? '🟢 «' + nombre + '» creado como prioritario.'
-    : '🔒 «' + nombre + '» creado y BLOQUEADO. A pagar el peaje.');
+    ? '«' + nombre + '» creado como prioritario.'
+    : '«' + nombre + '» creado y BLOQUEADO. A pagar el peaje.');
 }
 
 /* ================= CRONÓMETRO ================= */
@@ -1391,7 +1425,7 @@ function alternarCrono(){
     var p = proyecto(sel.value);
     if (!p){ toast('Elige un proyecto primero (prioritario o activo).'); return; }
     if (p.estado !== 'prioritario' && p.estado !== 'activo'){
-      toast('🚫 Ese proyecto no admite registro de tiempo.');
+      toast('Ese proyecto no admite registro de tiempo.');
       return;
     }
     estado.crono = { proyectoId: p.id, inicio: Date.now() };
@@ -1429,7 +1463,7 @@ function exportarJSON(){
   a.click();
   document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
-  toast('⬆️ Copia exportada. Guárdala en un sitio seguro.');
+  toast('Copia exportada. Guárdala en un sitio seguro.');
 }
 
 // Valida e importa un JSON de copia de seguridad. Devuelve true si fue bien.
@@ -1438,11 +1472,11 @@ function importarJSON(texto){
   try {
     datos = JSON.parse(texto);
   } catch(e){
-    toast('❌ Eso no parece un JSON válido. Revisa que lo hayas pegado entero.');
+    toast('Eso no parece un JSON válido. Revisa que lo hayas pegado entero.');
     return false;
   }
   if (!datos || !Array.isArray(datos.proyectos) || !Array.isArray(datos.sesiones)){
-    toast('❌ El JSON no tiene el formato de una copia de Gatekeeper.');
+    toast('El JSON no tiene el formato de una copia de Gatekeeper.');
     return false;
   }
   if (!('crono' in datos)) datos.crono = null;
@@ -1551,7 +1585,7 @@ function conectarEventos(){
       case 'reactivar':        reactivar(p); break;
       case 'pausar':
         p.estado = 'pausado'; guardar(); render();
-        toast('⏸ «' + p.nombre + '» pausado. No cuenta para el límite de activos.');
+        toast('«' + p.nombre + '» pausado. No cuenta para el límite de activos.');
         break;
       case 'terminar':         terminar(p); break;
       case 'borrar-bloqueado': borrarBloqueado(p); break;
@@ -1578,7 +1612,7 @@ function conectarEventos(){
     estado.config.orModelo = document.getElementById('aj-modelo').value.trim() || MODELO_DEFECTO;
     document.getElementById('aj-modelo').value = estado.config.orModelo;
     guardar();
-    toast('💾 Configuración de IA guardada.');
+    toast('Configuración de IA guardada.');
   });
   document.getElementById('btn-probar-ia').addEventListener('click', function(){
     // Guardar lo que haya escrito y lanzar una estimación de prueba
@@ -1587,15 +1621,15 @@ function conectarEventos(){
     guardar();
     var salida = document.getElementById('aj-estado-ia');
     if (!estado.config.orClave){
-      salida.textContent = '❌ Falta la clave API. Consíguela gratis en openrouter.ai/keys.';
+      salida.textContent = 'Fallo: falta la clave API. Consíguela gratis en openrouter.ai/keys.';
       return;
     }
-    salida.textContent = '⏳ Probando conexión con «' + estado.config.orModelo + '»… (los modelos razonadores pueden tardar medio minuto)';
+    salida.textContent = 'Probando conexión con «' + estado.config.orModelo + '»… (los modelos razonadores pueden tardar medio minuto)';
     estimarConIA('Pintar una habitación pequeña', 'personal', 'prueba de conexión')
       .then(function(resultado){
         salida.textContent = resultado.dias !== null
-          ? '✅ Conexión correcta: la IA respondió (' + resultado.dias + ' días para el proyecto de prueba).'
-          : '❌ Fallo: ' + resultado.error;
+          ? 'Correcto: la IA respondió (' + resultado.dias + ' días para el proyecto de prueba).'
+          : 'Fallo: ' + resultado.error;
       });
   });
 
@@ -1608,14 +1642,14 @@ function conectarEventos(){
       if (importarJSON(texto)){
         document.getElementById('txt-importar').value = '';
         render();
-        toast('📥 Copia importada correctamente.');
+        toast('Copia importada correctamente.');
       }
     });
   });
 
   // Ajustes: borrar todo (doble confirmación)
   document.getElementById('btn-borrar-todo').addEventListener('click', function(){
-    confirmar('☠️ Borrar TODOS los datos', 'Proyectos, sesiones, peajes, racha. Todo. Esto no se puede deshacer.', 'Lo entiendo, seguir', true, function(){
+    confirmar('Borrar TODOS los datos', 'Proyectos, sesiones, peajes, racha. Todo. Esto no se puede deshacer.', 'Lo entiendo, seguir', true, function(){
       setTimeout(function(){
         confirmar('Última oportunidad', '¿De verdad quieres dejar Gatekeeper a cero?', 'Sí, borrar todo', true, function(){
           estado = datosVacios();
