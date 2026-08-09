@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0d1117">
+<meta name="theme-color" content="#1b232b">
 <!-- Metadatos para que iOS la trate como app a pantalla completa -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -19,21 +19,22 @@
    Diseño mobile-first, oscuro por defecto, botones grandes.
    ============================================================ */
 :root{
-  --fondo:#0d1117;        /* fondo general */
-  --card:#161b22;         /* tarjetas */
-  --panel:#1c2129;        /* paneles internos */
-  --borde:#30363d;
-  --texto:#e6edf3;
-  --gris:#8b949e;
+  /* Paleta gris pizarra + aguamarina: tonos suaves, nada estridente */
+  --fondo:#1b232b;        /* fondo general (pizarra oscura) */
+  --card:#232d37;         /* tarjetas */
+  --panel:#2a3642;        /* paneles internos */
+  --borde:#3b4a58;
+  --texto:#e6edf2;
+  --gris:#94a7b8;
   /* Colores de estado */
-  --verde:#3fb950;        /* prioritario */
-  --verde-osc:#1d5c2b;
-  --azul:#58a6ff;         /* activo */
-  --azul-osc:#1f4a7a;
-  --grisestado:#6e7681;   /* bloqueado */
-  --ambar:#d29922;        /* pausado / avisos */
-  --rojo:#f85149;         /* peligro */
-  --rojo-osc:#67060c;
+  --verde:#7fd8c3;        /* prioritario (aguamarina suave) */
+  --verde-osc:#1e3f3a;
+  --azul:#8fb8d8;         /* activo (azul pizarra suave) */
+  --azul-osc:#2a3e4f;
+  --grisestado:#8494a3;   /* bloqueado */
+  --ambar:#d9bd8d;        /* pausado / avisos (arena) */
+  --rojo:#dd9791;         /* peligro (coral apagado) */
+  --rojo-osc:#4a2723;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{-webkit-text-size-adjust:100%}
@@ -60,10 +61,10 @@ header h1 span{color:var(--verde)}
 
 /* ---------- Banner rojo persistente ---------- */
 .banner-rojo{
-  background:linear-gradient(135deg,#3d0c0c,#67060c);
+  background:linear-gradient(135deg,#3a2724,#4a2723);
   border:1px solid var(--rojo);border-radius:14px;
   padding:14px 16px;margin-bottom:14px;
-  color:#ffd8d6;font-weight:600;font-size:15px;
+  color:#f0d9d5;font-weight:600;font-size:15px;
   display:flex;gap:10px;align-items:center;
 }
 .banner-rojo .ico{font-size:22px;flex:none}
@@ -76,9 +77,9 @@ header h1 span{color:var(--verde)}
   min-height:54px;
 }
 .btn:active{transform:scale(.98);opacity:.9}
-.btn-verde{background:var(--verde);color:#04260d}
-.btn-azul{background:var(--azul);color:#08243f}
-.btn-rojo{background:var(--rojo);color:#2d0000}
+.btn-verde{background:var(--verde);color:#12312b}
+.btn-azul{background:var(--azul);color:#1a2f3f}
+.btn-rojo{background:var(--rojo);color:#3d1c18}
 .btn-borde{background:transparent;border:1.5px solid var(--borde);color:var(--texto)}
 .btn-chico{padding:10px 14px;font-size:14px;min-height:44px;width:auto;display:inline-block;border-radius:11px}
 .btn[disabled]{opacity:.4;pointer-events:none}
@@ -103,9 +104,9 @@ input[type=range]{width:100%;accent-color:var(--azul);height:34px}
   text-transform:uppercase;border-radius:999px;padding:3px 10px}
 .chip-prioritario{background:var(--verde-osc);color:var(--verde)}
 .chip-activo{background:var(--azul-osc);color:var(--azul)}
-.chip-bloqueado{background:#2a2f36;color:var(--grisestado)}
-.chip-pausado{background:#3c2e08;color:var(--ambar)}
-.chip-terminado{background:#21262d;color:var(--gris)}
+.chip-bloqueado{background:#313d49;color:var(--grisestado)}
+.chip-pausado{background:#3d3628;color:var(--ambar)}
+.chip-terminado{background:#2a3540;color:var(--gris)}
 
 /* ---------- Tarjeta de proyecto ---------- */
 .proy{background:var(--card);border:1px solid var(--borde);border-radius:16px;
@@ -165,7 +166,7 @@ input[type=range]{width:100%;accent-color:var(--azul);height:34px}
 /* ---------- Navegación inferior ---------- */
 nav{
   position:fixed;bottom:0;left:0;right:0;z-index:50;
-  background:rgba(13,17,23,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:rgba(27,35,43,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border-top:1px solid var(--borde);
   padding:8px 8px calc(8px + env(safe-area-inset-bottom));
   display:flex;
@@ -187,8 +188,8 @@ nav button.on{color:var(--texto);background:var(--panel)}
 .fab{
   position:fixed;right:18px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:40;
   width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;
-  background:var(--verde);color:#04260d;font-size:32px;font-weight:800;
-  box-shadow:0 6px 18px rgba(63,185,80,.35);
+  background:var(--verde);color:#12312b;font-size:32px;font-weight:800;
+  box-shadow:0 6px 18px rgba(127,216,195,.28);
 }
 .fab:active{transform:scale(.94)}
 
@@ -213,7 +214,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
 #toast{
   position:fixed;left:50%;transform:translateX(-50%);
   bottom:calc(100px + env(safe-area-inset-bottom));z-index:200;
-  background:#21262d;border:1px solid var(--borde);color:var(--texto);
+  background:#2c3844;border:1px solid var(--borde);color:var(--texto);
   padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;
   max-width:88%;text-align:center;display:none;
   box-shadow:0 8px 24px rgba(0,0,0,.5);
