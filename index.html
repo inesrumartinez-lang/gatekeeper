@@ -459,7 +459,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
       </label>
       <p class="nota" id="np-info-peaje" style="margin-bottom:12px">
         La IA hará su propia estimación de duración <b>sin ver la tuya</b>, y la duración
-        final será la <b>media de las dos</b>. El peaje será de 1.5h por día de esa media…
+        final será la <b>media de las dos</b>. El peaje será de 1h por día de esa media…
         salvo que la ruleta decida que hoy es tu día de suerte y lo deje en 1 hora.
         Se paga trabajando en tus prioritarios: <b>1h de tesis descuenta 1h</b>;
         <b>1h de AI research descuenta 45 min</b>.
@@ -492,7 +492,8 @@ nav button.on{color:var(--texto);background:var(--panel)}
 /* ---------------- Constantes ---------------- */
 var CLAVE_DATOS = 'gatekeeper_v1';       // clave única en localStorage
 var MAX_ACTIVOS = 3;                     // máximo de proyectos activos a la vez
-var HORAS_POR_DIA = 1.5;                 // mínimo sugerido de peaje por día estimado
+var HORAS_POR_DIA = 1;                   // horas de peaje (en tesis) por día estimado
+var MAX_BLOQUEADOS = 3;                  // máximo de proyectos bloqueados en cola
 var DIAS_AVISO = 5;                      // días sin prioritario antes del banner rojo
 var PENALIZACION = 0.25;                 // +25% de peaje al borrar un bloqueado
 var PROB_SUERTE = 0.10;                  // probabilidad de que la ruleta toque (1 de cada 10)
@@ -664,6 +665,38 @@ function horasPeajePagadas(p){
 
 function peajeCompleto(p){
   return p.peaje && horasPeajePagadas(p) >= p.peaje.horas - 0.001;
+}
+
+// Días distintos en los que se ha registrado tiempo en un proyecto
+function diasTrabajados(p){
+  var dias = {};
+  estado.sesiones.forEach(function(s){
+    if (s.proyectoId === p.id) dias[s.fecha] = true;
+  });
+  return Object.keys(dias).length;
+}
+
+// Horas totales registradas en un proyecto
+function horasTotales(p){
+  var total = 0;
+  estado.sesiones.forEach(function(s){
+    if (s.proyectoId === p.id) total += s.horas;
+  });
+  return total;
+}
+
+// Avance de un proyecto. Para los que nacieron con estimación de días
+// (los que tienen peaje), el avance se gana trabajando: cada día con tiempo
+// registrado suma su parte proporcional SOBRE EL 90%; el 10% restante es un
+// ajuste manual, por si el proyecto se alarga más de lo estimado.
+// Los prioritarios (sin estimación) mantienen el avance 100% manual.
+function avanceDe(p){
+  if (p.estado === 'terminado') return 100;
+  if (p.peaje && p.peaje.diasUsuario){
+    var auto = Math.min(90, (diasTrabajados(p) / p.peaje.diasUsuario) * 90);
+    return Math.min(100, Math.round(auto + (p.avanceExtra || 0)));
+  }
+  return p.avance;
 }
 
 // Racha: días consecutivos (hasta hoy, o ayer si hoy aún no has trabajado)
@@ -869,7 +902,9 @@ function renderProyectos(){
     var lista = porEstado(est);
     if (lista.length === 0) return;
     html += '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);margin:16px 4px 10px">' +
-            NOMBRE_ESTADO[est] + (est === 'activo' ? ' (' + lista.length + '/' + MAX_ACTIVOS + ')' : '') + '</h2>';
+            (est === 'terminado' ? 'Histórico' : NOMBRE_ESTADO[est]) +
+            (est === 'activo' ? ' (' + lista.length + '/' + MAX_ACTIVOS + ')' : '') +
+            (est === 'bloqueado' ? ' (' + lista.length + '/' + MAX_BLOQUEADOS + ')' : '') + '</h2>';
     lista.forEach(function(p){ html += tarjetaProyecto(p); });
   });
   cont.innerHTML = html;
@@ -906,15 +941,40 @@ function tarjetaProyecto(p){
     h += '</div>';
 
   } else if (p.estado === 'terminado'){
-    h += '<div class="proy-avance">Avance final: ' + p.avance + '%</div>' +
-         '<div class="proy-acciones"><button class="btn btn-borde btn-chico" data-accion="borrar-simple">' + ico('trash') + ' Borrar</button></div>';
+    // Ficha de histórico: cuánto costó realmente el proyecto
+    var horas = horasTotales(p);
+    var nDias = diasTrabajados(p);
+    h += '<div class="proy-avance">Tiempo invertido: <b style="color:var(--texto)">' + fmtHoras(horas) + '</b>' +
+         ' en ' + nDias + ' día' + (nDias === 1 ? '' : 's') + ' de trabajo</div>';
+    if (p.peaje && p.peaje.diasUsuario){
+      h += '<div class="proy-avance">Estimación: tú ' + p.peaje.diasUsuario + 'd' +
+           (p.peaje.diasIA ? ' · IA ' + p.peaje.diasIA + 'd' : '') +
+           ' → real: ' + nDias + 'd trabajados</div>';
+    }
+    if (p.terminadoEn){
+      h += '<div class="proy-avance">Del ' + fmtFecha(p.creadoEn.slice(0,10)) +
+           ' al ' + fmtFecha(p.terminadoEn.slice(0,10)) +
+           ' (' + (diasEntre(p.creadoEn.slice(0,10), p.terminadoEn.slice(0,10)) + 1) + ' días de calendario)</div>';
+    }
+    h += '<div class="proy-acciones"><button class="btn btn-borde btn-chico" data-accion="borrar-simple">' + ico('trash') + ' Borrar</button></div>';
 
   } else {
-    // prioritario / activo / pausado: avance editable y acciones
-    h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + p.avance + '%</b></div>' +
-         '<div class="barra ' + (p.estado === 'prioritario' ? 'barra-verde' : p.estado === 'activo' ? 'barra-azul' : 'barra-ambar') + '">' +
-         '<div style="width:' + p.avance + '%"></div></div>' +
-         '<input type="range" min="0" max="100" step="5" value="' + p.avance + '" data-accion="avance" aria-label="Avance">';
+    // prioritario / activo / pausado: avance y acciones
+    var av = avanceDe(p);
+    var claseBarra = (p.estado === 'prioritario' ? 'barra-verde' : p.estado === 'activo' ? 'barra-azul' : 'barra-ambar');
+    if (p.peaje && p.peaje.diasUsuario){
+      // Avance automático: se gana trabajando (90%) + ajuste manual (10%)
+      h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b> · ' +
+           diasTrabajados(p) + ' de ' + p.peaje.diasUsuario + ' días trabajados</div>' +
+           '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
+           '<input type="range" min="0" max="10" step="1" value="' + (p.avanceExtra || 0) + '" data-accion="avance" aria-label="Ajuste manual">' +
+           '<div class="proy-avance" style="margin-top:0">Ajuste manual: +' + (p.avanceExtra || 0) + '% (el 90% se gana registrando días de trabajo)</div>';
+    } else {
+      // Prioritarios: sin estimación de días, avance manual clásico
+      h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b></div>' +
+           '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
+           '<input type="range" min="0" max="100" step="5" value="' + p.avance + '" data-accion="avance" aria-label="Avance">';
+    }
     h += '<div class="proy-acciones">';
     if (p.estado === 'activo'){
       h += '<button class="btn btn-borde btn-chico" data-accion="pausar">' + ico('pause') + ' Pausar</button>';
@@ -1044,6 +1104,7 @@ function terminar(p){
     'Se marcará como terminado (tachado). Ya no podrás registrar horas en él.',
     'Terminar', false, function(){
       p.estado = 'terminado'; p.avance = 100;
+      p.terminadoEn = new Date().toISOString();
       guardar(); render();
       toast('«' + p.nombre + '» terminado. Uno menos.');
     });
@@ -1308,6 +1369,10 @@ function intentarCrearProyecto(){
     toast('Crea primero un proyecto prioritario (Tesis o AI research): los peajes se pagan trabajando en él.', 5000);
     return;
   }
+  if (!esPrio && porEstado('bloqueado').length >= MAX_BLOQUEADOS){
+    toast('Ya tienes ' + MAX_BLOQUEADOS + ' proyectos bloqueados en cola. Desbloquea o borra alguno antes de apuntarte otro más.', 5500);
+    return;
+  }
 
   var sinTerminar = estado.proyectos.filter(function(p){ return p.estado !== 'terminado'; }).length;
 
@@ -1338,7 +1403,7 @@ function intentarCrearProyecto(){
     var diasFinales = diasIA !== null
       ? Math.round(((diasUsuario + diasIA) / 2) * 10) / 10
       : diasUsuario;
-    // Peaje: 1.5h por día de la duración final, redondeado a media hora
+    // Peaje: 1h (de tesis) por día de la duración final, redondeado a media hora
     var peajeHoras = Math.max(0.5, Math.round(diasFinales * HORAS_POR_DIA * 2) / 2);
 
     var desglose = diasIA !== null
@@ -1594,7 +1659,11 @@ function conectarEventos(){
     var tarjeta = ev.target.closest('.proy');
     var p = proyecto(tarjeta.dataset.id);
     if (!p) return;
-    p.avance = parseInt(ev.target.value, 10);
+    if (p.peaje && p.peaje.diasUsuario){
+      p.avanceExtra = parseInt(ev.target.value, 10);   // solo el 10% de reserva
+    } else {
+      p.avance = parseInt(ev.target.value, 10);
+    }
     guardar();
     render();
   });
