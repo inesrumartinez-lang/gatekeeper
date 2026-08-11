@@ -212,6 +212,29 @@ nav button.on{color:var(--texto);background:var(--panel)}
 .hoja h3{font-size:19px;font-weight:800;margin-bottom:14px}
 .hoja .msj{font-size:15px;color:var(--texto);margin-bottom:18px;white-space:pre-line}
 
+/* ---------- Calendario del historial ---------- */
+.cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.cal-nav b{font-size:15px;text-transform:capitalize}
+.cal-nav button{background:var(--panel);border:1px solid var(--borde);color:var(--texto);
+  border-radius:10px;padding:8px 16px;font-size:17px;cursor:pointer;min-height:40px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-sem{font-size:10px;color:var(--gris);text-align:center;font-weight:700;padding-bottom:2px}
+.cal-dia{background:var(--panel);border-radius:8px;min-height:46px;padding:4px 3px 5px;
+  display:flex;flex-direction:column;justify-content:space-between}
+.cal-dia .n{font-size:11px;color:var(--gris);line-height:1}
+.cal-dia.hoy{outline:1.5px solid var(--verde)}
+.cal-dia.hoy .n{color:var(--verde);font-weight:800}
+.cal-dia.vacio{background:transparent}
+.cal-barra{display:flex;height:8px;border-radius:4px;overflow:hidden;background:transparent}
+.cal-barra div{height:100%}
+.cal-leyenda{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;font-size:12px;color:var(--gris)}
+.cal-leyenda .pt{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:-1px}
+.hist-fila{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px dashed var(--borde);font-size:14px}
+.hist-fila:last-child{border-bottom:none}
+.hist-fila .pt{width:10px;height:10px;border-radius:3px;flex:none}
+.hist-fila b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.hist-fila .der{color:var(--gris);flex:none;font-variant-numeric:tabular-nums}
+
 /* ---------- Ruleta del peaje ---------- */
 #velo-ruleta{z-index:140}
 .ruleta-valor{
@@ -365,6 +388,26 @@ nav button.on{color:var(--texto);background:var(--panel)}
       </div>
     </section>
 
+    <!-- ============ VISTA: HISTORIAL ============ -->
+    <section class="vista" id="vista-historial">
+      <div class="crd">
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-calendar"/></svg> Calendario de trabajo</h2>
+        <div class="cal-nav">
+          <button id="cal-prev" aria-label="Mes anterior">‹</button>
+          <b id="cal-titulo"></b>
+          <button id="cal-sig" aria-label="Mes siguiente">›</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-leyenda" id="cal-leyenda"></div>
+        <p class="nota" id="cal-total" style="margin-top:10px"></p>
+      </div>
+      <div class="crd">
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg> Tiempo por proyecto</h2>
+        <div id="hist-proyectos"></div>
+      </div>
+      <div id="hist-terminados"></div>
+    </section>
+
     <!-- ============ VISTA: AJUSTES ============ -->
     <section class="vista" id="vista-ajustes">
       <div class="crd">
@@ -413,6 +456,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
   <button data-vista="panel" class="on"><svg class="ico ni" aria-hidden="true"><use href="#i-home"/></svg>Panel</button>
   <button data-vista="proyectos"><svg class="ico ni" aria-hidden="true"><use href="#i-folder"/></svg>Proyectos</button>
   <button data-vista="tiempo"><svg class="ico ni" aria-hidden="true"><use href="#i-clock"/></svg>Tiempo</button>
+  <button data-vista="historial"><svg class="ico ni" aria-hidden="true"><use href="#i-calendar"/></svg>Historial</button>
   <button data-vista="ajustes"><svg class="ico ni" aria-hidden="true"><use href="#i-settings"/></svg>Ajustes</button>
 </nav>
 
@@ -539,6 +583,9 @@ var NOMBRE_ESTADO = {
   pausado:'Pausado', terminado:'Terminado'
 };
 var NOMBRE_TIPO = { tesis:'Tesis', airesearch:'AI research', freelance:'Freelance', personal:'Personal', otro:'Otro' };
+// Colores del calendario: uno por proyecto, asignados por orden de creación
+var PALETA_CAL = ['#7fd8c3','#8fb8d8','#d9bd8d','#dd9791','#b5a3d8','#a3c9a0','#d8a3c2','#93c7cf'];
+var MESES_LARGOS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 // Tipos que pueden ser prioritarios (y en los que se paga peaje)
 var TIPOS_PRIORITARIOS = ['tesis', 'airesearch'];
 // Cambio de moneda del peaje: 1.5h de tesis equivalen a 2h de AI research,
@@ -604,6 +651,14 @@ function fmtFecha(clave){
 }
 
 function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+// Color estable de un proyecto para el calendario y las listas del historial
+function colorDeProyecto(id){
+  for (var i = 0; i < estado.proyectos.length; i++){
+    if (estado.proyectos[i].id === id) return PALETA_CAL[i % PALETA_CAL.length];
+  }
+  return 'var(--grisestado)';   // sesiones de proyectos ya borrados
+}
 
 // Icono del sprite Feather para HTML generado dinámicamente
 function ico(nombre){
@@ -882,6 +937,7 @@ function render(){
   renderPanel();
   renderProyectos();
   renderTiempo();
+  renderHistorial();
 }
 
 /* ----- Banner rojo persistente ----- */
@@ -972,13 +1028,14 @@ function renderProyectos(){
     cont.innerHTML = '<div class="crd"><p class="vacio">No hay proyectos todavía.<br>Crea tu primer proyecto <b>prioritario</b> con el botón +.</p></div>';
     return;
   }
-  var orden = ['prioritario','activo','pausado','bloqueado','terminado'];
+  // Los terminados viven en la pestaña Historial
+  var orden = ['prioritario','activo','pausado','bloqueado'];
   var html = '';
   orden.forEach(function(est){
     var lista = porEstado(est);
     if (lista.length === 0) return;
     html += '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);margin:16px 4px 10px">' +
-            (est === 'terminado' ? 'Histórico' : NOMBRE_ESTADO[est]) +
+            NOMBRE_ESTADO[est] +
             (est === 'activo' ? ' (' + lista.length + '/' + MAX_ACTIVOS + ')' : '') +
             (est === 'bloqueado' ? ' (' + lista.length + '/' + MAX_BLOQUEADOS + ')' : '') + '</h2>';
     lista.forEach(function(p){ html += tarjetaProyecto(p); });
@@ -1070,6 +1127,95 @@ function tarjetaProyecto(p){
   }
   h += '</div>';
   return h;
+}
+
+/* ----- Vista historial: calendario, tiempo por proyecto y terminados ----- */
+
+// Mes que se está viendo en el calendario ({y, m}); null = mes actual
+var calMes = null;
+
+function renderHistorial(){
+  var ahora = new Date();
+  if (!calMes) calMes = { y: ahora.getFullYear(), m: ahora.getMonth() };
+
+  document.getElementById('cal-titulo').textContent =
+    MESES_LARGOS[calMes.m] + ' ' + calMes.y;
+
+  // Sesiones del mes agrupadas por día y proyecto
+  var prefijo = calMes.y + '-' + String(calMes.m + 1).padStart(2, '0') + '-';
+  var porDia = {};          // '01' -> { proyectoId: horas }
+  var porProyectoMes = {};  // proyectoId -> horas del mes
+  var totalMes = 0;
+  estado.sesiones.forEach(function(s){
+    if (s.fecha.indexOf(prefijo) !== 0) return;
+    var dia = s.fecha.slice(8, 10);
+    if (!porDia[dia]) porDia[dia] = {};
+    porDia[dia][s.proyectoId] = (porDia[dia][s.proyectoId] || 0) + s.horas;
+    porProyectoMes[s.proyectoId] = (porProyectoMes[s.proyectoId] || 0) + s.horas;
+    totalMes += s.horas;
+  });
+
+  // Rejilla: cabecera de días de la semana + huecos + días del mes
+  var html = ['L','M','X','J','V','S','D'].map(function(d){
+    return '<div class="cal-sem">' + d + '</div>';
+  }).join('');
+  var primerDia = new Date(calMes.y, calMes.m, 1).getDay();   // 0=domingo
+  var huecos = (primerDia === 0) ? 6 : primerDia - 1;          // semana empieza en lunes
+  for (var i = 0; i < huecos; i++) html += '<div class="cal-dia vacio"></div>';
+
+  var diasMes = new Date(calMes.y, calMes.m + 1, 0).getDate();
+  var claveHoy = hoy();
+  for (var d = 1; d <= diasMes; d++){
+    var dd = String(d).padStart(2, '0');
+    var esHoy = (prefijo + dd) === claveHoy;
+    html += '<div class="cal-dia' + (esHoy ? ' hoy' : '') + '"><span class="n">' + d + '</span>';
+    var datos = porDia[dd];
+    if (datos){
+      // Barra apilada: cada proyecto ocupa su proporción de las horas del día
+      var totalDia = 0, ids = Object.keys(datos);
+      ids.forEach(function(id){ totalDia += datos[id]; });
+      ids.sort(function(a, b){ return datos[b] - datos[a]; });
+      html += '<div class="cal-barra">' + ids.map(function(id){
+        var ancho = Math.max(8, Math.round(datos[id] / totalDia * 100));
+        return '<div style="width:' + ancho + '%;background:' + colorDeProyecto(id) + '" title="' + esc(proyecto(id) ? proyecto(id).nombre : '') + '"></div>';
+      }).join('') + '</div>';
+    } else {
+      html += '<div class="cal-barra"></div>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('cal-grid').innerHTML = html;
+
+  // Leyenda del mes (proyectos con horas, de más a menos)
+  var idsMes = Object.keys(porProyectoMes).sort(function(a, b){
+    return porProyectoMes[b] - porProyectoMes[a];
+  });
+  document.getElementById('cal-leyenda').innerHTML = idsMes.map(function(id){
+    var p = proyecto(id);
+    return '<span><span class="pt" style="background:' + colorDeProyecto(id) + '"></span>' +
+      esc(p ? p.nombre : '(borrado)') + ' · ' + fmtHoras(porProyectoMes[id]) + '</span>';
+  }).join('');
+  document.getElementById('cal-total').textContent = totalMes > 0
+    ? 'Total del mes: ' + fmtHoras(totalMes) + '.'
+    : 'Sin horas registradas este mes.';
+
+  // Tiempo por proyecto (histórico completo, de más a menos horas)
+  var conHoras = estado.proyectos.filter(function(p){ return horasTotales(p) > 0; })
+    .sort(function(a, b){ return horasTotales(b) - horasTotales(a); });
+  document.getElementById('hist-proyectos').innerHTML = conHoras.length === 0
+    ? '<p class="vacio">Aún no hay tiempo registrado.</p>'
+    : conHoras.map(function(p){
+        var nDias = diasTrabajados(p);
+        return '<div class="hist-fila"><span class="pt" style="background:' + colorDeProyecto(p.id) + '"></span>' +
+          '<b' + (p.estado === 'terminado' ? ' style="text-decoration:line-through"' : '') + '>' + esc(p.nombre) + '</b>' +
+          '<span class="der">' + fmtHoras(horasTotales(p)) + ' · ' + nDias + ' día' + (nDias === 1 ? '' : 's') + '</span></div>';
+      }).join('');
+
+  // Fichas completas de los proyectos terminados
+  var terminados = porEstado('terminado');
+  document.getElementById('hist-terminados').innerHTML = terminados.length === 0 ? '' :
+    '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);margin:16px 4px 10px">Terminados</h2>' +
+    terminados.map(tarjetaProyecto).join('');
 }
 
 /* ----- Vista tiempo: cronómetro, manual, sesiones ----- */
@@ -1787,8 +1933,9 @@ function conectarEventos(){
   document.getElementById('btn-crono').addEventListener('click', alternarCrono);
   document.getElementById('btn-manual').addEventListener('click', guardarManual);
 
-  // Acciones dentro de las tarjetas de proyecto (delegación de eventos)
-  document.getElementById('lista-proyectos').addEventListener('click', function(ev){
+  // Acciones dentro de las tarjetas de proyecto (delegación de eventos).
+  // Se escucha también en el historial, donde viven las fichas de terminados.
+  function accionesTarjeta(ev){
     var btn = ev.target.closest('[data-accion]');
     if (!btn || btn.dataset.accion === 'avance') return;
     var tarjeta = btn.closest('.proy');
@@ -1805,6 +1952,20 @@ function conectarEventos(){
       case 'borrar-bloqueado': borrarBloqueado(p); break;
       case 'borrar-simple':    borrarSimple(p); break;
     }
+  }
+  document.getElementById('lista-proyectos').addEventListener('click', accionesTarjeta);
+  document.getElementById('hist-terminados').addEventListener('click', accionesTarjeta);
+
+  // Navegación de meses del calendario
+  document.getElementById('cal-prev').addEventListener('click', function(){
+    calMes.m--;
+    if (calMes.m < 0){ calMes.m = 11; calMes.y--; }
+    renderHistorial();
+  });
+  document.getElementById('cal-sig').addEventListener('click', function(){
+    calMes.m++;
+    if (calMes.m > 11){ calMes.m = 0; calMes.y++; }
+    renderHistorial();
   });
 
   // Slider de avance (change para no guardar en cada pixel)
