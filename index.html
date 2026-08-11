@@ -447,7 +447,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v12 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v13 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -502,6 +502,11 @@ nav button.on{color:var(--texto);background:var(--panel)}
       Aún no tienes ningún proyecto prioritario: el primero debe ser de tipo Tesis o AI research y se creará como prioritario.
     </p>
 
+    <label class="campo"><span class="et">Tu estimación de duración (días)</span>
+      <input type="number" id="np-dias" min="1" max="3650" step="1" placeholder="10" inputmode="numeric">
+      <span class="nota">El avance se llenará solo (hasta el 90%) según registres días de trabajo; el 10% final lo mueves tú.</span>
+    </label>
+
     <!-- Bloque de peaje: solo para proyectos NO prioritarios -->
     <div id="np-bloque-peaje">
       <hr class="sep">
@@ -514,9 +519,6 @@ nav button.on{color:var(--texto);background:var(--panel)}
       <label class="campo"><span class="et">¿En qué consiste? (para que la IA pueda estimar)</span>
         <textarea id="np-desc" rows="3" placeholder="Ej.: montar un podcast quincenal: comprar micros, grabar dos pilotos y publicarlos"></textarea>
         <button type="button" class="btn btn-borde btn-chico" id="np-dictar" style="margin-top:8px"><svg class="ico" aria-hidden="true"><use href="#i-mic"/></svg> Dictar descripción</button>
-      </label>
-      <label class="campo"><span class="et">Tu estimación de duración (días)</span>
-        <input type="number" id="np-dias" min="1" max="3650" step="1" placeholder="10" inputmode="numeric">
       </label>
       <p class="nota" id="np-info-peaje" style="margin-bottom:12px">
         La IA hará su propia estimación de duración <b>sin ver la tuya</b>, y la duración
@@ -818,15 +820,22 @@ function puedeTrabajarDiaExtra(p, fecha){
   };
 }
 
-// Avance de un proyecto. Para los que nacieron con estimación de días
-// (los que tienen peaje), el avance se gana trabajando: cada día con tiempo
-// registrado suma su parte proporcional SOBRE EL 90%; el 10% restante es un
-// ajuste manual, por si el proyecto se alarga más de lo estimado.
-// Los prioritarios (sin estimación) mantienen el avance 100% manual.
+// Días estimados de un proyecto: los bloqueados los llevan en el peaje,
+// los prioritarios en su propio campo (diasEstimados)
+function diasEstimadosDe(p){
+  if (p.peaje && p.peaje.diasUsuario) return p.peaje.diasUsuario;
+  return p.diasEstimados || null;
+}
+
+// Avance de un proyecto. Con estimación de días, el avance se gana
+// trabajando: cada día con tiempo registrado suma su parte proporcional
+// SOBRE EL 90%; el 10% restante es un ajuste manual, por si el proyecto
+// se alarga. Sin estimación (prioritarios antiguos), avance 100% manual.
 function avanceDe(p){
   if (p.estado === 'terminado') return 100;
-  if (p.peaje && p.peaje.diasUsuario){
-    var auto = Math.min(90, (diasTrabajados(p) / p.peaje.diasUsuario) * 90);
+  var est = diasEstimadosDe(p);
+  if (est){
+    var auto = Math.min(90, (diasTrabajados(p) / est) * 90);
     return Math.min(100, Math.round(auto + (p.avanceExtra || 0)));
   }
   return p.avance;
@@ -1102,22 +1111,27 @@ function tarjetaProyecto(p){
     // prioritario / activo / pausado: avance y acciones
     var av = avanceDe(p);
     var claseBarra = (p.estado === 'prioritario' ? 'barra-verde' : p.estado === 'activo' ? 'barra-azul' : 'barra-ambar');
-    if (p.peaje && p.peaje.diasUsuario){
-      // Avance automático: se gana trabajando (90%) + ajuste manual (10%)
-      if (diasTrabajados(p) >= p.peaje.diasUsuario && p.estado !== 'pausado'){
+    var estDias = diasEstimadosDe(p);
+    if (estDias){
+      // Avance automático: se gana trabajando (90%) + ajuste manual (10%).
+      // El aviso del coste del día extra solo aplica a los que pagan peaje.
+      if (p.peaje && diasTrabajados(p) >= p.peaje.diasUsuario && p.estado !== 'pausado'){
         h += '<div class="proy-avance" style="color:var(--ambar)">Días estimados agotados: cada día nuevo cuesta ' +
              fmtHoras(HORAS_DIA_EXTRA) + ' en un prioritario</div>';
       }
       h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b> · ' +
-           diasTrabajados(p) + ' de ' + p.peaje.diasUsuario + ' días trabajados</div>' +
+           diasTrabajados(p) + ' de ' + estDias + ' días trabajados</div>' +
            '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
            '<input type="range" min="0" max="10" step="1" value="' + (p.avanceExtra || 0) + '" data-accion="avance" aria-label="Ajuste manual">' +
            '<div class="proy-avance" style="margin-top:0">Ajuste manual: +' + (p.avanceExtra || 0) + '% (el 90% se gana registrando días de trabajo)</div>';
     } else {
-      // Prioritarios: sin estimación de días, avance manual clásico
+      // Sin estimación de días (prioritarios antiguos): avance manual clásico
       h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b></div>' +
            '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
            '<input type="range" min="0" max="100" step="5" value="' + p.avance + '" data-accion="avance" aria-label="Avance">';
+      if (p.estado === 'prioritario'){
+        h += '<div class="proy-acciones" style="margin-top:6px"><button class="btn btn-borde btn-chico" data-accion="estimar-dias">Definir duración estimada</button></div>';
+      }
     }
     h += '<div class="proy-acciones">';
     if (p.estado === 'activo'){
@@ -1679,18 +1693,20 @@ function intentarCrearProyecto(){
 
   var sinTerminar = estado.proyectos.filter(function(p){ return p.estado !== 'terminado'; }).length;
 
-  // Prioritario: sin peaje ni estimaciones, solo la confirmación de doble paso
+  var diasUsuario = parseInt(document.getElementById('np-dias').value, 10);
+  if (!diasUsuario || diasUsuario < 1){ toast('Indica tu estimación de duración en días.'); return; }
+
+  // Prioritario: sin peaje ni media con la IA, pero con estimación de días
+  // para que el avance se llene solo al trabajar
   if (esPrio){
-    var msjPrio = 'Vas a crear «' + nombre + '» como PRIORITARIO (sin peaje).' +
+    var msjPrio = 'Vas a crear «' + nombre + '» como PRIORITARIO (sin peaje).\n\n' +
+      'Estimación: ' + diasUsuario + ' días. El avance crecerá solo según trabajes días (hasta el 90%); el 10% final lo mueves tú.' +
       (sinTerminar > 0 ? '\n\nTienes ' + sinTerminar + ' proyecto(s) sin terminar. ¿Seguro?' : '\n\n¿Seguro?');
     confirmar('Un momento…', msjPrio, 'Sí, crear prioritario', false, function(){
-      crearProyecto(nombre, tipo, descripcion, true, null);
+      crearProyecto(nombre, tipo, descripcion, true, null, false, diasUsuario);
     });
     return;
   }
-
-  var diasUsuario = parseInt(document.getElementById('np-dias').value, 10);
-  if (!diasUsuario || diasUsuario < 1){ toast('Indica tu estimación de duración en días.'); return; }
 
   // Pedir la estimación independiente a la IA (el botón avisa mientras tanto)
   var btn = document.getElementById('np-crear');
@@ -1743,11 +1759,12 @@ function intentarCrearProyecto(){
   });
 }
 
-function crearProyecto(nombre, tipo, descripcion, esPrio, peaje, sinToast){
+function crearProyecto(nombre, tipo, descripcion, esPrio, peaje, sinToast, diasEstimados){
   var p = {
     id: uid(), nombre: nombre, tipo: tipo, descripcion: descripcion,
     estado: esPrio ? 'prioritario' : 'bloqueado',
-    avance: 0,
+    avance: 0, avanceExtra: 0,
+    diasEstimados: esPrio ? (diasEstimados || null) : null,
     creadoEn: new Date().toISOString(),
     peaje: esPrio ? null : peaje
   };
@@ -1956,6 +1973,17 @@ function conectarEventos(){
       case 'terminar':         terminar(p); break;
       case 'borrar-bloqueado': borrarBloqueado(p); break;
       case 'borrar-simple':    borrarSimple(p); break;
+      case 'estimar-dias': {
+        // Migración amable: prioritarios creados antes de que existiera la estimación
+        var r = window.prompt('¿Cuántos días estimas que tardarás en terminar «' + p.nombre + '»?');
+        var d = parseInt(r, 10);
+        if (r === null) break;
+        if (!d || d < 1){ toast('Eso no es un número de días válido.'); break; }
+        p.diasEstimados = d;
+        guardar(); render();
+        toast('Estimación guardada: ' + d + ' días. El avance se llenará solo al trabajar.');
+        break;
+      }
     }
   }
   document.getElementById('lista-proyectos').addEventListener('click', accionesTarjeta);
@@ -1979,7 +2007,7 @@ function conectarEventos(){
     var tarjeta = ev.target.closest('.proy');
     var p = proyecto(tarjeta.dataset.id);
     if (!p) return;
-    if (p.peaje && p.peaje.diasUsuario){
+    if (diasEstimadosDe(p)){
       p.avanceExtra = parseInt(ev.target.value, 10);   // solo el 10% de reserva
     } else {
       p.avance = parseInt(ev.target.value, 10);
