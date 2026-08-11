@@ -489,6 +489,16 @@ nav button.on{color:var(--texto);background:var(--panel)}
   </div>
 </div>
 
+<!-- ============ MODAL: PREMIO POR TERMINAR UN PRIORITARIO ============ -->
+<div class="velo" id="velo-premio">
+  <div class="hoja">
+    <h3><svg class="ico" aria-hidden="true"><use href="#i-unlock"/></svg> Premio: desbloquea un proyecto</h3>
+    <div class="msj">Has terminado un prioritario. Como premio, elige un proyecto bloqueado: su peaje queda condonado.</div>
+    <div id="premio-lista"></div>
+    <button class="btn btn-borde" id="premio-nada" style="margin-top:4px">No desbloquear ninguno</button>
+  </div>
+</div>
+
 <!-- ============ MODAL: RULETA DEL PEAJE ============ -->
 <div class="velo" id="velo-ruleta">
   <div class="hoja" style="text-align:center">
@@ -688,7 +698,8 @@ function horasPeajePagadas(p){
 }
 
 function peajeCompleto(p){
-  return p.peaje && horasPeajePagadas(p) >= p.peaje.horas - 0.001;
+  // El peaje se completa pagándolo... o con el premio por terminar un prioritario
+  return p.peaje && (p.peaje.premiado || horasPeajePagadas(p) >= p.peaje.horas - 0.001);
 }
 
 // Días distintos en los que se ha registrado tiempo en un proyecto
@@ -941,7 +952,7 @@ function renderPanel(){
     var html2 = '';
     bloqueados.forEach(function(p){
       var pagadas = horasPeajePagadas(p);
-      var pct = Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
+      var pct = peajeCompleto(p) ? 100 : Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
       html2 += '<div class="peaje-fila">' +
         '<div class="peaje-cab"><b>' + ico('lock') + ' ' + esc(p.nombre) + '</b><span>' + fmtHoras(pagadas) + ' / ' + fmtHoras(p.peaje.horas) + '</span></div>' +
         '<div class="barra ' + (pct >= 100 ? 'barra-verde' : 'barra-ambar') + '"><div style="width:' + pct + '%"></div></div>' +
@@ -986,10 +997,12 @@ function tarjetaProyecto(p){
   if (p.estado === 'bloqueado'){
     // Proyecto bloqueado: gris, sin acciones salvo desbloquear (si toca) o borrar (con castigo)
     var pagadas = horasPeajePagadas(p);
-    var pct = Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
+    var pct = peajeCompleto(p) ? 100 : Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
     var penalizado = p.peaje.horas > p.peaje.horasBase + 0.001;
     // Desglose de la estimación: la tuya, la de la IA y la media (o suerte)
-    if (p.peaje.suerte){
+    if (p.peaje.premiado){
+      h += '<div class="proy-avance" style="color:var(--verde)">' + ico('unlock') + ' Premio por terminar un prioritario: peaje condonado</div>';
+    } else if (p.peaje.suerte){
       h += '<div class="proy-avance" style="color:var(--verde)">' + ico('zap') + ' ¡Tocó la ruleta! Peaje de suerte: solo ' + fmtHoras(p.peaje.horasBase) + '</div>';
     } else if (p.peaje.diasIA){
       h += '<div class="proy-avance">Duración: tú ' + p.peaje.diasUsuario + 'd · IA ' + p.peaje.diasIA + 'd → media ' + p.peaje.dias + 'd</div>';
@@ -1169,14 +1182,35 @@ function terminar(p){
       return;
     }
   }
-  confirmar('Terminar «' + p.nombre + '»',
-    'Se marcará como terminado (tachado). Ya no podrás registrar horas en él.',
-    'Terminar', false, function(){
-      p.estado = 'terminado'; p.avance = 100;
-      p.terminadoEn = new Date().toISOString();
-      guardar(); render();
-      toast('«' + p.nombre + '» terminado. Uno menos.');
-    });
+  var eraPrioritario = p.estado === 'prioritario';
+  var hayBloqueados = porEstado('bloqueado').length > 0;
+  var msjTerminar = 'Se marcará como terminado (tachado). Ya no podrás registrar horas en él.';
+  if (eraPrioritario && hayBloqueados){
+    msjTerminar += '\n\nY como premio por terminar un prioritario, podrás desbloquear gratis uno de tus proyectos bloqueados.';
+  }
+  confirmar('Terminar «' + p.nombre + '»', msjTerminar, 'Terminar', false, function(){
+    p.estado = 'terminado'; p.avance = 100;
+    p.terminadoEn = new Date().toISOString();
+    guardar(); render();
+    toast('«' + p.nombre + '» terminado. Uno menos.');
+    // Premio por terminar un prioritario: condonar el peaje de un bloqueado
+    if (eraPrioritario && porEstado('bloqueado').length > 0){
+      setTimeout(ofrecerPremio, 350);
+    }
+  });
+}
+
+// Abre el modal del premio con la lista de bloqueados para elegir
+function ofrecerPremio(){
+  var bloqueados = porEstado('bloqueado');
+  if (bloqueados.length === 0) return;
+  document.getElementById('premio-lista').innerHTML = bloqueados.map(function(b){
+    var pagadas = horasPeajePagadas(b);
+    return '<button class="btn btn-borde" data-premio="' + b.id + '" style="margin-bottom:10px;text-align:left">' +
+      ico('unlock') + ' ' + esc(b.nombre) +
+      ' <span style="color:var(--gris);font-weight:400">(' + fmtHoras(pagadas) + ' / ' + fmtHoras(b.peaje.horas) + ' pagadas)</span></button>';
+  }).join('');
+  document.getElementById('velo-premio').classList.add('visible');
 }
 
 // Borrar un proyecto bloqueado: castigo del +25% de peaje al resto de bloqueados
@@ -1786,6 +1820,26 @@ function conectarEventos(){
     }
     guardar();
     render();
+  });
+
+  // Modal del premio: elegir qué bloqueado desbloquear
+  document.getElementById('premio-lista').addEventListener('click', function(ev){
+    var btn = ev.target.closest('[data-premio]');
+    if (!btn) return;
+    var b = proyecto(btn.dataset.premio);
+    document.getElementById('velo-premio').classList.remove('visible');
+    if (!b || !b.peaje) return;
+    b.peaje.premiado = true;   // peaje condonado para siempre
+    if (porEstado('activo').length < MAX_ACTIVOS){
+      b.estado = 'activo';
+      toast('Premio canjeado: «' + b.nombre + '» desbloqueado y activo.');
+    } else {
+      toast('Premio canjeado: peaje de «' + b.nombre + '» condonado. Actívalo cuando liberes un hueco de activos.', 5000);
+    }
+    guardar(); render();
+  });
+  document.getElementById('premio-nada').addEventListener('click', function(){
+    document.getElementById('velo-premio').classList.remove('visible');
   });
 
   // Ajustes: configuración de la IA (OpenRouter)
