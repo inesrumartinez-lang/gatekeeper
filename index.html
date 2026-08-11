@@ -343,7 +343,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <label class="campo"><span class="et">Fecha</span>
           <input type="date" id="in-fecha">
         </label>
-        <button class="btn btn-azul" id="btn-manual">Guardar horas</button>
+        <button class="btn btn-verde" id="btn-manual">Guardar horas</button>
         <p class="nota" style="margin-top:10px">Solo se puede registrar tiempo en proyectos prioritarios o activos. Nunca en bloqueados.</p>
       </div>
 
@@ -462,7 +462,8 @@ nav button.on{color:var(--texto);background:var(--panel)}
         final será la <b>media de las dos</b>. El peaje será de 1h por día de esa media…
         salvo que la ruleta decida que hoy es tu día de suerte y lo deje en 1 hora.
         Se paga trabajando en tus prioritarios: <b>1h de tesis descuenta 1h</b>;
-        <b>1h de AI research descuenta 45 min</b>.
+        <b>1h de AI research descuenta 45 min</b>. Y ojo: si te pasas de los días
+        estimados, cada día extra de trabajo costará 30 min más de prioritario.
       </p>
       <p class="nota nota-aviso" id="np-sin-ia" style="display:none;margin-bottom:12px">
         No hay clave de OpenRouter configurada (Ajustes → IA), así que se usará solo tu estimación.
@@ -494,6 +495,7 @@ var CLAVE_DATOS = 'gatekeeper_v1';       // clave única en localStorage
 var MAX_ACTIVOS = 3;                     // máximo de proyectos activos a la vez
 var HORAS_POR_DIA = 1;                   // horas de peaje (en tesis) por día estimado
 var MAX_BLOQUEADOS = 3;                  // máximo de proyectos bloqueados en cola
+var HORAS_DIA_EXTRA = 0.5;               // coste en prioritarios de cada día que exceda la estimación
 var DIAS_AVISO = 5;                      // días sin prioritario antes del banner rojo
 var PENALIZACION = 0.25;                 // +25% de peaje al borrar un bloqueado
 var PROB_SUERTE = 0.10;                  // probabilidad de que la ruleta toque (1 de cada 10)
@@ -685,6 +687,44 @@ function horasTotales(p){
   return total;
 }
 
+// ¿Se puede registrar tiempo en el proyecto p en la fecha dada?
+// Si el proyecto ya agotó sus días estimados, cada día NUEVO de trabajo
+// cuesta 30 min registrados en prioritarios (tesis o AI research, a valor
+// nominal) desde que se agotó el plazo. Los días ya empezados no cuentan.
+function puedeTrabajarDiaExtra(p, fecha){
+  if (!p.peaje || !p.peaje.diasUsuario) return { ok: true };
+
+  var fechas = {};
+  estado.sesiones.forEach(function(s){
+    if (s.proyectoId === p.id) fechas[s.fecha] = true;
+  });
+  if (fechas[fecha]) return { ok: true };            // seguir un día ya empezado es gratis
+
+  var lista = Object.keys(fechas).sort();
+  if (lista.length < p.peaje.diasUsuario) return { ok: true };   // aún dentro del plazo
+
+  // Día en el que se agotó la estimación y días extra ya consumidos
+  var fechaLimite = lista[p.peaje.diasUsuario - 1];
+  var extrasUsados = lista.length - p.peaje.diasUsuario;
+  var necesario = HORAS_DIA_EXTRA * (extrasUsados + 1);
+
+  // Horas en prioritarios desde que se agotó el plazo (aquí no hay cambio
+  // de moneda: media hora de tesis o de AI research valen lo mismo)
+  var pagado = 0;
+  estado.sesiones.forEach(function(s){
+    if (s.prioritario && s.fecha >= fechaLimite) pagado += s.horas;
+  });
+
+  if (pagado + 0.001 >= necesario) return { ok: true };
+  var faltan = necesario - pagado;
+  return {
+    ok: false,
+    motivo: '«' + p.nombre + '» ya agotó sus ' + p.peaje.diasUsuario +
+      ' días estimados. Cada día extra cuesta ' + fmtHoras(HORAS_DIA_EXTRA) +
+      ' en un prioritario: te faltan ' + fmtHoras(faltan) + '.'
+  };
+}
+
 // Avance de un proyecto. Para los que nacieron con estimación de días
 // (los que tienen peaje), el avance se gana trabajando: cada día con tiempo
 // registrado suma su parte proporcional SOBRE EL 90%; el 10% restante es un
@@ -742,6 +782,9 @@ function registrarSesion(proyectoId, horas, fecha, manual){
     toast('Solo puedes registrar tiempo en proyectos prioritarios o activos.');
     return false;
   }
+  // Pasarse de los días estimados tiene coste: comprobarlo antes de guardar
+  var extra = puedeTrabajarDiaExtra(p, fecha);
+  if (!extra.ok){ toast(extra.motivo, 6500); return false; }
   // Guardamos si la sesión fue en un prioritario (para racha y banner)
   estado.sesiones.push({
     id: uid(), proyectoId: proyectoId, fecha: fecha,
@@ -964,6 +1007,10 @@ function tarjetaProyecto(p){
     var claseBarra = (p.estado === 'prioritario' ? 'barra-verde' : p.estado === 'activo' ? 'barra-azul' : 'barra-ambar');
     if (p.peaje && p.peaje.diasUsuario){
       // Avance automático: se gana trabajando (90%) + ajuste manual (10%)
+      if (diasTrabajados(p) >= p.peaje.diasUsuario && p.estado !== 'pausado'){
+        h += '<div class="proy-avance" style="color:var(--ambar)">Días estimados agotados: cada día nuevo cuesta ' +
+             fmtHoras(HORAS_DIA_EXTRA) + ' en un prioritario</div>';
+      }
       h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b> · ' +
            diasTrabajados(p) + ' de ' + p.peaje.diasUsuario + ' días trabajados</div>' +
            '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
@@ -1487,6 +1534,9 @@ function alternarCrono(){
       toast('Ese proyecto no admite registro de tiempo.');
       return;
     }
+    // No dejar arrancar un día extra sin haberlo pagado (mejor ahora que al parar)
+    var extra = puedeTrabajarDiaExtra(p, hoy());
+    if (!extra.ok){ toast(extra.motivo, 6500); return; }
     estado.crono = { proyectoId: p.id, inicio: Date.now() };
     guardar();
     renderCrono();
