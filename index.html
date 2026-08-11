@@ -439,10 +439,15 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <button class="btn btn-azul" id="btn-importar"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Importar copia</button>
       </div>
       <div class="crd">
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Actualizaciones</h2>
+        <button class="btn btn-azul" id="btn-actualizar">Buscar actualización</button>
+        <p class="nota" style="margin-top:10px">Con conexión, la app se actualiza sola al abrirla. Este botón fuerza la comprobación por si acaso.</p>
+      </div>
+      <div class="crd">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center">Gatekeeper v1 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v12 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -2032,6 +2037,17 @@ function conectarEventos(){
       });
   });
 
+  // Ajustes: buscar actualización (refresca el service worker y recarga)
+  document.getElementById('btn-actualizar').addEventListener('click', function(){
+    toast('Buscando actualización…');
+    if (!('serviceWorker' in navigator)){ location.reload(); return; }
+    navigator.serviceWorker.getRegistration().then(function(reg){
+      if (reg) return reg.update();
+    }).catch(function(){}).then(function(){
+      setTimeout(function(){ location.reload(); }, 1200);
+    });
+  });
+
   // Ajustes: copia de seguridad
   document.getElementById('btn-exportar').addEventListener('click', exportarJSON);
   document.getElementById('btn-importar').addEventListener('click', function(){
@@ -2077,10 +2093,16 @@ if (errorCarga){
   irA('panel');
 }
 
-// Registrar el service worker para que la app funcione sin conexión
+// Registrar el service worker para que la app funcione sin conexión.
+// updateViaCache:'none' y update() al volver a la app aceleran que las
+// versiones nuevas lleguen sin esperas raras en iOS.
 if ('serviceWorker' in navigator){
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js').catch(function(){
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function(reg){
+      document.addEventListener('visibilitychange', function(){
+        if (!document.hidden) reg.update().catch(function(){});
+      });
+    }).catch(function(){
       /* Sin service worker la app sigue funcionando, solo pierde el modo offline */
     });
   });

@@ -5,7 +5,7 @@
  * caché si es posible y se cae a red solo cuando hace falta.
  */
 
-const NOMBRE_CACHE = 'gatekeeper-v11';
+const NOMBRE_CACHE = 'gatekeeper-v12';
 
 // Archivos que forman la app completa (app shell)
 const ARCHIVOS = [
@@ -39,10 +39,38 @@ self.addEventListener('activate', (evento) => {
   );
 });
 
-// Peticiones: responder desde caché; si no está, ir a red y guardar copia
+// Peticiones:
+// - Navegaciones (la página): RED PRIMERO con tope de 4s, para que con
+//   conexión siempre llegue la última versión publicada; la caché queda
+//   como respaldo cuando no hay red.
+// - Resto (iconos, manifest): caché primero, que apenas cambian.
 self.addEventListener('fetch', (evento) => {
   // Solo gestionamos peticiones GET (la app no hace otras)
   if (evento.request.method !== 'GET') return;
+
+  const esNavegacion = evento.request.mode === 'navigate' ||
+    evento.request.destination === 'document';
+
+  if (esNavegacion) {
+    evento.respondWith((async () => {
+      try {
+        const control = new AbortController();
+        const temporizador = setTimeout(() => control.abort(), 4000);
+        const red = await fetch(evento.request, { signal: control.signal });
+        clearTimeout(temporizador);
+        if (red && red.status === 200) {
+          const copia = red.clone();
+          caches.open(NOMBRE_CACHE).then((cache) => cache.put('./index.html', copia));
+        }
+        return red;
+      } catch (e) {
+        // Sin red (o demasiado lenta): servir la copia guardada
+        const cacheado = await caches.match('./index.html');
+        return cacheado || Response.error();
+      }
+    })());
+    return;
+  }
 
   evento.respondWith(
     caches.match(evento.request).then((respuestaCache) => {
@@ -57,12 +85,7 @@ self.addEventListener('fetch', (evento) => {
           }
           return respuestaRed;
         })
-        .catch(() => {
-          // Sin red y sin caché: si es una navegación, devolver la app
-          if (evento.request.mode === 'navigate') {
-            return caches.match('./index.html');
-          }
-        });
+        .catch(() => {});
     })
   );
 });
