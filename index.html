@@ -212,6 +212,18 @@ nav button.on{color:var(--texto);background:var(--panel)}
 .hoja h3{font-size:19px;font-weight:800;margin-bottom:14px}
 .hoja .msj{font-size:15px;color:var(--texto);margin-bottom:18px;white-space:pre-line}
 
+/* ---------- Ruleta del peaje ---------- */
+#velo-ruleta{z-index:140}
+.ruleta-valor{
+  font-size:64px;font-weight:900;text-align:center;
+  font-variant-numeric:tabular-nums;margin:18px 0 6px;color:var(--texto);
+}
+.ruleta-valor.girando{animation:ruleta-pulso .16s infinite alternate}
+@keyframes ruleta-pulso{from{transform:scale(1);opacity:.65}to{transform:scale(1.07);opacity:1}}
+.ruleta-valor.premio{color:var(--verde);animation:ruleta-premio .6s ease}
+.ruleta-valor.sin-premio{animation:ruleta-premio .4s ease}
+@keyframes ruleta-premio{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.22)}100%{transform:scale(1);opacity:1}}
+
 /* ---------- Avisos flotantes (toast) ---------- */
 #toast{
   position:fixed;left:50%;transform:translateX(-50%);
@@ -272,7 +284,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         dañado o que el navegador los haya borrado. Tranquilidad: aquí abajo puedes
         rescatar lo que quede, importar una copia de seguridad, o empezar de cero.
       </p>
-      <button class="btn btn-borde" id="btn-rescatar" style="margin-bottom:10px"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Descargar lo que se pueda rescatar</button>
+      <button class="btn btn-azul" id="btn-rescatar" style="margin-bottom:10px"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Descargar lo que se pueda rescatar</button>
       <hr class="sep">
       <label class="campo"><span class="et">Pega aquí tu copia de seguridad (JSON)</span>
         <textarea id="txt-rescate" rows="4" placeholder='{"proyectos":[...]}'></textarea>
@@ -369,7 +381,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
           <input type="text" id="aj-modelo" placeholder="deepseek/deepseek-chat-v3-0324:free" autocomplete="off" autocapitalize="off" spellcheck="false">
         </label>
         <div class="fila-btns">
-          <button class="btn btn-borde" id="btn-guardar-ia">Guardar</button>
+          <button class="btn btn-azul" id="btn-guardar-ia">Guardar</button>
           <button class="btn btn-azul" id="btn-probar-ia">Probar conexión</button>
         </div>
         <p class="nota" id="aj-estado-ia" style="margin-top:10px"></p>
@@ -377,7 +389,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
       <div class="crd">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-save"/></svg> Copia de seguridad</h2>
         <p class="nota" style="margin-bottom:12px">Todos tus datos viven solo en este dispositivo. Haz copias de vez en cuando.</p>
-        <button class="btn btn-borde" id="btn-exportar" style="margin-bottom:10px"><svg class="ico" aria-hidden="true"><use href="#i-upload"/></svg> Exportar copia (JSON)</button>
+        <button class="btn btn-azul" id="btn-exportar" style="margin-bottom:10px"><svg class="ico" aria-hidden="true"><use href="#i-upload"/></svg> Exportar copia (JSON)</button>
         <label class="campo"><span class="et">Importar: pega aquí el JSON de una copia</span>
           <textarea id="txt-importar" rows="3" placeholder='{"proyectos":[...]}'></textarea>
         </label>
@@ -477,6 +489,16 @@ nav button.on{color:var(--texto);background:var(--panel)}
   </div>
 </div>
 
+<!-- ============ MODAL: RULETA DEL PEAJE ============ -->
+<div class="velo" id="velo-ruleta">
+  <div class="hoja" style="text-align:center">
+    <h3 style="text-align:center"><svg class="ico" aria-hidden="true"><use href="#i-zap"/></svg> La ruleta del peaje</h3>
+    <div class="ruleta-valor" id="ruleta-valor">?</div>
+    <div class="msj" id="ruleta-msj" style="text-align:center"></div>
+    <button class="btn btn-verde" id="ruleta-continuar" style="display:none">Continuar</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -497,7 +519,7 @@ var HORAS_POR_DIA = 1;                   // horas de peaje (en tesis) por día e
 var MAX_BLOQUEADOS = 3;                  // máximo de proyectos bloqueados en cola
 var HORAS_DIA_EXTRA = 0.5;               // coste en prioritarios de cada día que exceda la estimación
 var DIAS_AVISO = 5;                      // días sin prioritario antes del banner rojo
-var PENALIZACION = 0.25;                 // +25% de peaje al borrar un bloqueado
+var PENALIZACION = 0.10;                 // +10% de peaje al borrar un bloqueado
 var PROB_SUERTE = 0.10;                  // probabilidad de que la ruleta toque (1 de cada 10)
 var HORAS_SUERTE = 1;                    // peaje reducido cuando toca la suerte
 var MODELO_DEFECTO = 'deepseek/deepseek-chat-v3-0324:free';   // modelo gratuito inicial (editable en Ajustes)
@@ -980,7 +1002,7 @@ function tarjetaProyecto(p){
     if (pct >= 100){
       h += '<button class="btn btn-verde btn-chico" data-accion="desbloquear">' + ico('unlock') + ' Desbloquear</button>';
     }
-    h += '<button class="btn btn-borde btn-chico" data-accion="borrar-bloqueado" style="color:var(--rojo)">' + ico('trash') + ' Borrar (+25% al resto)</button>';
+    h += '<button class="btn btn-borde btn-chico" data-accion="borrar-bloqueado" style="color:var(--rojo)">' + ico('trash') + ' Borrar (+' + Math.round(PENALIZACION*100) + '% al resto)</button>';
     h += '</div>';
 
   } else if (p.estado === 'terminado'){
@@ -1160,7 +1182,7 @@ function terminar(p){
 // Borrar un proyecto bloqueado: castigo del +25% de peaje al resto de bloqueados
 function borrarBloqueado(p){
   var otros = porEstado('bloqueado').filter(function(x){ return x.id !== p.id; });
-  var aviso = 'Rendirse tiene precio.\n\nSi borras «' + p.nombre + '», el peaje de TODOS los demás proyectos bloqueados subirá un 25%';
+  var aviso = 'Rendirse tiene precio.\n\nSi borras «' + p.nombre + '», el peaje de TODOS los demás proyectos bloqueados subirá un ' + Math.round(PENALIZACION*100) + '%';
   aviso += otros.length > 0
     ? ' (afecta a ' + otros.length + ' proyecto(s)).'
     : '. Ahora mismo no hay otros bloqueados, pero que conste.';
@@ -1171,7 +1193,7 @@ function borrarBloqueado(p){
     eliminarProyecto(p.id);
     guardar(); render();
     toast(otros.length > 0
-      ? 'Borrado. Peajes del resto aumentados un 25%. Te lo advertí.'
+      ? 'Borrado. Peajes del resto aumentados un ' + Math.round(PENALIZACION*100) + '%. Te lo advertí.'
       : 'Borrado.');
   });
 }
@@ -1345,6 +1367,55 @@ function alternarDictado(){
   }
 }
 
+/* ================= RULETA DEL PEAJE ================= */
+
+// Animación de la ruleta: los valores giran cada vez más despacio hasta
+// caer en el resultado (que ya está decidido antes de empezar a girar).
+function mostrarRuleta(peajeNormal, suerte, alCerrar){
+  var velo = document.getElementById('velo-ruleta');
+  var valor = document.getElementById('ruleta-valor');
+  var msj = document.getElementById('ruleta-msj');
+  var btn = document.getElementById('ruleta-continuar');
+
+  velo.classList.add('visible');
+  btn.style.display = 'none';
+  msj.textContent = 'Girando…';
+  valor.className = 'ruleta-valor girando';
+
+  // Valores que se muestran durante el giro (pura escenografía)
+  var opciones = [
+    peajeNormal + 'h', HORAS_SUERTE + 'h',
+    Math.max(1, Math.round(peajeNormal * 0.5)) + 'h',
+    Math.round(peajeNormal * 2) + 'h',
+    Math.max(1, Math.round(peajeNormal * 0.75)) + 'h',
+    Math.round(peajeNormal * 1.5) + 'h'
+  ];
+
+  var paso = 0, totalPasos = 14, retraso = 60;
+  function girar(){
+    valor.textContent = opciones[paso % opciones.length];
+    paso++;
+    if (paso < totalPasos){
+      retraso = Math.round(retraso * 1.15);   // deceleración
+      setTimeout(girar, retraso);
+    } else {
+      // Resultado final
+      valor.className = 'ruleta-valor ' + (suerte ? 'premio' : 'sin-premio');
+      valor.textContent = (suerte ? HORAS_SUERTE : peajeNormal) + 'h';
+      msj.textContent = suerte
+        ? '¡Ha tocado la ruleta! El peaje se queda en solo ' + HORAS_SUERTE + ' hora de prioritario. Una horita y a por él.'
+        : 'Peaje completo: ' + peajeNormal + 'h en prioritarios. La ruleta no perdona (esta vez).';
+      btn.style.display = 'block';
+    }
+  }
+  setTimeout(girar, retraso);
+
+  btn.onclick = function(){
+    velo.classList.remove('visible');
+    if (alCerrar) alCerrar();
+  };
+}
+
 /* ================= NUEVO PROYECTO ================= */
 
 function abrirNuevoProyecto(){
@@ -1466,7 +1537,8 @@ function intentarCrearProyecto(){
       'El peaje NO se podrá editar ni borrar.';
 
     confirmar('Un momento…', msj, 'Sí, crearlo bloqueado', false, function(){
-      // La ruleta: muy de vez en cuando, el peaje se queda en 1 hora
+      // La ruleta: muy de vez en cuando, el peaje se queda en 1 hora.
+      // El resultado se decide aquí; la animación es puro teatro.
       var suerte = Math.random() < PROB_SUERTE;
       var horasFinales = suerte ? HORAS_SUERTE : peajeHoras;
       crearProyecto(nombre, tipo, descripcion, false, {
@@ -1476,21 +1548,17 @@ function intentarCrearProyecto(){
         diasUsuario: diasUsuario,  // lo que estimaste tú
         diasIA: diasIA,            // lo que estimó la IA (null si no pudo)
         suerte: suerte             // si tocó la ruleta
+      }, true);   // sin toast: el resultado lo anuncia la ruleta
+      mostrarRuleta(peajeHoras, suerte, function(){
+        toast(suerte
+          ? '«' + nombre + '» creado y BLOQUEADO con peaje de suerte: ' + HORAS_SUERTE + 'h.'
+          : '«' + nombre + '» creado y BLOQUEADO. A pagar el peaje.');
       });
-      if (suerte){
-        // Avisar de la suerte después de cerrar el modal de creación
-        setTimeout(function(){
-          avisar('¡Ha tocado la ruleta!',
-            'Hoy es tu día de suerte: el peaje de «' + nombre + '» se queda en SOLO ' +
-            HORAS_SUERTE + ' hora de trabajo en un prioritario.\n\n' +
-            'Una horita y a por el proyecto nuevo.', '¡Toma ya!');
-        }, 250);
-      }
     });
   });
 }
 
-function crearProyecto(nombre, tipo, descripcion, esPrio, peaje){
+function crearProyecto(nombre, tipo, descripcion, esPrio, peaje, sinToast){
   var p = {
     id: uid(), nombre: nombre, tipo: tipo, descripcion: descripcion,
     estado: esPrio ? 'prioritario' : 'bloqueado',
@@ -1502,9 +1570,11 @@ function crearProyecto(nombre, tipo, descripcion, esPrio, peaje){
   guardar();
   cerrarNuevoProyecto();
   render();
-  toast(esPrio
-    ? '«' + nombre + '» creado como prioritario.'
-    : '«' + nombre + '» creado y BLOQUEADO. A pagar el peaje.');
+  if (!sinToast){
+    toast(esPrio
+      ? '«' + nombre + '» creado como prioritario.'
+      : '«' + nombre + '» creado y BLOQUEADO. A pagar el peaje.');
+  }
 }
 
 /* ================= CRONÓMETRO ================= */
