@@ -165,6 +165,9 @@ input[type=range]{width:100%;accent-color:var(--azul);height:34px}
 .ses-fila b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ses-fila .der{color:var(--gris);flex:none;font-variant-numeric:tabular-nums}
 
+.ses-btn{background:none;border:none;color:var(--gris);padding:6px 7px;cursor:pointer;flex:none}
+.ses-btn:active{color:var(--texto)}
+
 /* ---------- Navegación inferior ---------- */
 nav{
   position:fixed;bottom:0;left:0;right:0;z-index:50;
@@ -238,8 +241,8 @@ nav button.on{color:var(--texto);background:var(--panel)}
 /* ---------- Ruleta del peaje ---------- */
 #velo-ruleta{z-index:140}
 .ruleta-valor{
-  font-size:64px;font-weight:900;text-align:center;
-  font-variant-numeric:tabular-nums;margin:18px 0 6px;color:var(--texto);
+  font-size:38px;font-weight:900;text-align:center;letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;margin:22px 0 10px;color:var(--texto);
 }
 .ruleta-valor.girando{animation:ruleta-pulso .16s infinite alternate}
 @keyframes ruleta-pulso{from{transform:scale(1);opacity:.65}to{transform:scale(1.07);opacity:1}}
@@ -447,7 +450,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v13 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v14 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -504,7 +507,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
 
     <label class="campo"><span class="et">Tu estimación de duración (días)</span>
       <input type="number" id="np-dias" min="1" max="3650" step="1" placeholder="10" inputmode="numeric">
-      <span class="nota">El avance se llenará solo (hasta el 90%) según registres días de trabajo; el 10% final lo mueves tú.</span>
+      <span class="nota">La tarjeta mostrará los días trabajados frente a esta estimación; el % de avance lo controlas tú.</span>
     </label>
 
     <!-- Bloque de peaje: solo para proyectos NO prioritarios -->
@@ -523,7 +526,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
       <p class="nota" id="np-info-peaje" style="margin-bottom:12px">
         La IA hará su propia estimación de duración <b>sin ver la tuya</b>, y la duración
         final será la <b>media de las dos</b>. El peaje será de 1h por día de esa media…
-        salvo que la ruleta decida que hoy es tu día de suerte y lo deje en 1 hora.
+        salvo que la ruleta (1 de cada 10) salga con premio y lo deje sin peaje.
         Se paga trabajando en tus prioritarios: <b>1h de tesis descuenta 1h</b>;
         <b>1h de AI research descuenta 45 min</b>. Y ojo: si te pasas de los días
         estimados, cada día extra de trabajo costará 30 min más de prioritario.
@@ -536,6 +539,24 @@ nav button.on{color:var(--texto);background:var(--panel)}
     <div class="fila-btns" style="margin-top:8px">
       <button class="btn btn-borde" id="np-cancelar">Cancelar</button>
       <button class="btn btn-verde" id="np-crear">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: EDITAR REGISTRO DE TIEMPO ============ -->
+<div class="velo" id="velo-sesion">
+  <div class="hoja">
+    <h3><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg> Editar registro</h3>
+    <p class="msj" id="ses-proyecto" style="margin-bottom:12px"></p>
+    <label class="campo"><span class="et">Horas</span>
+      <input type="number" id="ses-horas" min="0.25" max="24" step="0.25" inputmode="decimal">
+    </label>
+    <label class="campo"><span class="et">Fecha</span>
+      <input type="date" id="ses-fecha">
+    </label>
+    <div class="fila-btns">
+      <button class="btn btn-borde" id="ses-cancelar">Cancelar</button>
+      <button class="btn btn-verde" id="ses-guardar">Guardar</button>
     </div>
   </div>
 </div>
@@ -827,18 +848,11 @@ function diasEstimadosDe(p){
   return p.diasEstimados || null;
 }
 
-// Avance de un proyecto. Con estimación de días, el avance se gana
-// trabajando: cada día con tiempo registrado suma su parte proporcional
-// SOBRE EL 90%; el 10% restante es un ajuste manual, por si el proyecto
-// se alarga. Sin estimación (prioritarios antiguos), avance 100% manual.
+// Avance de un proyecto: siempre manual (lo controlas tú con el slider).
+// La estimación de días se muestra como información al lado.
 function avanceDe(p){
   if (p.estado === 'terminado') return 100;
-  var est = diasEstimadosDe(p);
-  if (est){
-    var auto = Math.min(90, (diasTrabajados(p) / est) * 90);
-    return Math.min(100, Math.round(auto + (p.avanceExtra || 0)));
-  }
-  return p.avance;
+  return p.avance || 0;
 }
 
 // Racha: días consecutivos (hasta hoy, o ayer si hoy aún no has trabajado)
@@ -1071,10 +1085,10 @@ function tarjetaProyecto(p){
     var pct = peajeCompleto(p) ? 100 : Math.min(100, Math.round(pagadas / p.peaje.horas * 100));
     var penalizado = p.peaje.horas > p.peaje.horasBase + 0.001;
     // Desglose de la estimación: la tuya, la de la IA y la media (o suerte)
-    if (p.peaje.premiado){
+    if (p.peaje.suerte){
+      h += '<div class="proy-avance" style="color:var(--verde)">' + ico('zap') + ' ¡Premio de la ruleta! Sin peaje: listo para desbloquear</div>';
+    } else if (p.peaje.premiado){
       h += '<div class="proy-avance" style="color:var(--verde)">' + ico('unlock') + ' Premio por terminar un prioritario: peaje condonado</div>';
-    } else if (p.peaje.suerte){
-      h += '<div class="proy-avance" style="color:var(--verde)">' + ico('zap') + ' ¡Tocó la ruleta! Peaje de suerte: solo ' + fmtHoras(p.peaje.horasBase) + '</div>';
     } else if (p.peaje.diasIA){
       h += '<div class="proy-avance">Duración: tú ' + p.peaje.diasUsuario + 'd · IA ' + p.peaje.diasIA + 'd → media ' + p.peaje.dias + 'd</div>';
     }
@@ -1112,26 +1126,17 @@ function tarjetaProyecto(p){
     var av = avanceDe(p);
     var claseBarra = (p.estado === 'prioritario' ? 'barra-verde' : p.estado === 'activo' ? 'barra-azul' : 'barra-ambar');
     var estDias = diasEstimadosDe(p);
-    if (estDias){
-      // Avance automático: se gana trabajando (90%) + ajuste manual (10%).
-      // El aviso del coste del día extra solo aplica a los que pagan peaje.
-      if (p.peaje && diasTrabajados(p) >= p.peaje.diasUsuario && p.estado !== 'pausado'){
-        h += '<div class="proy-avance" style="color:var(--ambar)">Días estimados agotados: cada día nuevo cuesta ' +
-             fmtHoras(HORAS_DIA_EXTRA) + ' en un prioritario</div>';
-      }
-      h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b> · ' +
-           diasTrabajados(p) + ' de ' + estDias + ' días trabajados</div>' +
-           '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
-           '<input type="range" min="0" max="10" step="1" value="' + (p.avanceExtra || 0) + '" data-accion="avance" aria-label="Ajuste manual">' +
-           '<div class="proy-avance" style="margin-top:0">Ajuste manual: +' + (p.avanceExtra || 0) + '% (el 90% se gana registrando días de trabajo)</div>';
-    } else {
-      // Sin estimación de días (prioritarios antiguos): avance manual clásico
-      h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b></div>' +
-           '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
-           '<input type="range" min="0" max="100" step="5" value="' + p.avance + '" data-accion="avance" aria-label="Avance">';
-      if (p.estado === 'prioritario'){
-        h += '<div class="proy-acciones" style="margin-top:6px"><button class="btn btn-borde btn-chico" data-accion="estimar-dias">Definir duración estimada</button></div>';
-      }
+    // El aviso del coste del día extra solo aplica a los que pagan peaje
+    if (p.peaje && p.peaje.diasUsuario && diasTrabajados(p) >= p.peaje.diasUsuario && p.estado !== 'pausado'){
+      h += '<div class="proy-avance" style="color:var(--ambar)">Días estimados agotados: cada día nuevo cuesta ' +
+           fmtHoras(HORAS_DIA_EXTRA) + ' en un prioritario</div>';
+    }
+    h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b>' +
+         (estDias ? ' · ' + diasTrabajados(p) + ' de ' + estDias + ' días trabajados' : '') + '</div>' +
+         '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
+         '<input type="range" min="0" max="100" step="5" value="' + (p.avance || 0) + '" data-accion="avance" aria-label="Avance">';
+    if (p.estado === 'prioritario' && !estDias){
+      h += '<div class="proy-acciones" style="margin-top:6px"><button class="btn btn-borde btn-chico" data-accion="estimar-dias">Definir duración estimada</button></div>';
     }
     h += '<div class="proy-acciones">';
     if (p.estado === 'activo'){
@@ -1271,7 +1276,9 @@ function renderTiempo(){
       var p = proyecto(s.proyectoId);
       return '<div class="ses-fila"><b><span style="color:var(--' + (s.prioritario ? 'verde' : 'azul') + ')">●</span> ' +
              esc(p ? p.nombre : '(borrado)') + '</b>' +
-             '<span class="der">' + fmtHoras(s.horas) + ' · ' + fmtFecha(s.fecha) + (s.manual ? ' (manual)' : '') + '</span></div>';
+             '<span class="der">' + fmtHoras(s.horas) + ' · ' + fmtFecha(s.fecha) + '</span>' +
+             '<button class="ses-btn" data-editar-ses="' + s.id + '" aria-label="Editar">' + ico('edit') + '</button>' +
+             '<button class="ses-btn" data-borrar-ses="' + s.id + '" aria-label="Borrar" style="color:var(--rojo)">' + ico('trash') + '</button></div>';
     }).join('');
   }
 }
@@ -1568,9 +1575,10 @@ function alternarDictado(){
 
 /* ================= RULETA DEL PEAJE ================= */
 
-// Animación de la ruleta: los valores giran cada vez más despacio hasta
-// caer en el resultado (que ya está decidido antes de empezar a girar).
-function mostrarRuleta(peajeNormal, suerte, alCerrar){
+// Animación de la ruleta: PREMIO / SIN PREMIO girando cada vez más
+// despacio hasta caer en el resultado (decidido antes de empezar).
+// Con PREMIO (1 de cada 10), el proyecto arranca sin peaje alguno.
+function mostrarRuleta(nombre, peajeNormal, suerte, alCerrar){
   var velo = document.getElementById('velo-ruleta');
   var valor = document.getElementById('ruleta-valor');
   var msj = document.getElementById('ruleta-msj');
@@ -1578,21 +1586,12 @@ function mostrarRuleta(peajeNormal, suerte, alCerrar){
 
   velo.classList.add('visible');
   btn.style.display = 'none';
-  msj.textContent = 'Girando…';
+  msj.textContent = 'Girando… (1 de cada 10 sale premio)';
   valor.className = 'ruleta-valor girando';
 
-  // Valores que se muestran durante el giro (pura escenografía)
-  var opciones = [
-    peajeNormal + 'h', HORAS_SUERTE + 'h',
-    Math.max(1, Math.round(peajeNormal * 0.5)) + 'h',
-    Math.round(peajeNormal * 2) + 'h',
-    Math.max(1, Math.round(peajeNormal * 0.75)) + 'h',
-    Math.round(peajeNormal * 1.5) + 'h'
-  ];
-
-  var paso = 0, totalPasos = 14, retraso = 60;
+  var paso = 0, totalPasos = 15, retraso = 60;
   function girar(){
-    valor.textContent = opciones[paso % opciones.length];
+    valor.textContent = (paso % 2 === 0) ? 'SIN PREMIO' : '★ PREMIO ★';
     paso++;
     if (paso < totalPasos){
       retraso = Math.round(retraso * 1.15);   // deceleración
@@ -1600,10 +1599,10 @@ function mostrarRuleta(peajeNormal, suerte, alCerrar){
     } else {
       // Resultado final
       valor.className = 'ruleta-valor ' + (suerte ? 'premio' : 'sin-premio');
-      valor.textContent = (suerte ? HORAS_SUERTE : peajeNormal) + 'h';
+      valor.textContent = suerte ? '★ PREMIO ★' : 'SIN PREMIO';
       msj.textContent = suerte
-        ? '¡Ha tocado la ruleta! El peaje se queda en solo ' + HORAS_SUERTE + ' hora de prioritario. Una horita y a por él.'
-        : 'Peaje completo: ' + peajeNormal + 'h en prioritarios. La ruleta no perdona (esta vez).';
+        ? '¡Premio! «' + nombre + '» se desbloquea inmediatamente: no tiene que pagar ningún peaje.'
+        : 'Peaje de ' + peajeNormal + 'h en prioritarios. La ruleta no perdona (esta vez).';
       btn.style.display = 'block';
     }
   }
@@ -1700,7 +1699,7 @@ function intentarCrearProyecto(){
   // para que el avance se llene solo al trabajar
   if (esPrio){
     var msjPrio = 'Vas a crear «' + nombre + '» como PRIORITARIO (sin peaje).\n\n' +
-      'Estimación: ' + diasUsuario + ' días. El avance crecerá solo según trabajes días (hasta el 90%); el 10% final lo mueves tú.' +
+      'Estimación: ' + diasUsuario + ' días.' +
       (sinTerminar > 0 ? '\n\nTienes ' + sinTerminar + ' proyecto(s) sin terminar. ¿Seguro?' : '\n\n¿Seguro?');
     confirmar('Un momento…', msjPrio, 'Sí, crear prioritario', false, function(){
       crearProyecto(nombre, tipo, descripcion, true, null, false, diasUsuario);
@@ -1738,22 +1737,35 @@ function intentarCrearProyecto(){
       'El peaje NO se podrá editar ni borrar.';
 
     confirmar('Un momento…', msj, 'Sí, crearlo bloqueado', false, function(){
-      // La ruleta: muy de vez en cuando, el peaje se queda en 1 hora.
-      // El resultado se decide aquí; la animación es puro teatro.
+      // La ruleta: 1 de cada 10, el proyecto sale premiado y arranca sin
+      // peaje. El resultado se decide aquí; la animación es puro teatro.
       var suerte = Math.random() < PROB_SUERTE;
-      var horasFinales = suerte ? HORAS_SUERTE : peajeHoras;
       crearProyecto(nombre, tipo, descripcion, false, {
-        horas: horasFinales,       // horas exigidas (puede crecer por penalizaciones)
-        horasBase: horasFinales,   // peaje original, para mostrar el castigo acumulado
+        horas: peajeHoras,         // horas exigidas (puede crecer por penalizaciones)
+        horasBase: peajeHoras,     // peaje original, para mostrar el castigo acumulado
         dias: diasFinales,         // duración final (media)
         diasUsuario: diasUsuario,  // lo que estimaste tú
         diasIA: diasIA,            // lo que estimó la IA (null si no pudo)
-        suerte: suerte             // si tocó la ruleta
+        suerte: suerte,            // si tocó la ruleta
+        premiado: suerte           // premio = peaje condonado desde el nacimiento
       }, true);   // sin toast: el resultado lo anuncia la ruleta
-      mostrarRuleta(peajeHoras, suerte, function(){
-        toast(suerte
-          ? '«' + nombre + '» creado y BLOQUEADO con peaje de suerte: ' + HORAS_SUERTE + 'h.'
-          : '«' + nombre + '» creado y BLOQUEADO. A pagar el peaje.');
+      mostrarRuleta(nombre, peajeHoras, suerte, function(){
+        if (suerte){
+          // Con premio, el proyecto arranca inmediatamente si hay hueco
+          var creado = null;
+          estado.proyectos.forEach(function(x){
+            if (x.nombre === nombre && x.estado === 'bloqueado' && x.peaje && x.peaje.suerte) creado = x;
+          });
+          if (creado && porEstado('activo').length < MAX_ACTIVOS){
+            creado.estado = 'activo';
+            guardar(); render();
+            toast('«' + nombre + '» creado y ACTIVO: la ruleta le perdonó el peaje.');
+          } else {
+            toast('«' + nombre + '» sin peaje por el premio; actívalo cuando liberes un hueco de activos.', 5000);
+          }
+        } else {
+          toast('«' + nombre + '» creado y BLOQUEADO. A pagar el peaje.');
+        }
       });
     });
   });
@@ -1829,6 +1841,60 @@ function guardarManual(){
     document.getElementById('in-horas').value = '';
     render();
   }
+}
+
+/* ================= EDITAR / BORRAR REGISTROS DE TIEMPO ================= */
+
+var sesionEditando = null;   // id de la sesión abierta en el modal
+
+function sesionPorId(id){
+  for (var i = 0; i < estado.sesiones.length; i++)
+    if (estado.sesiones[i].id === id) return estado.sesiones[i];
+  return null;
+}
+
+function abrirEditarSesion(id){
+  var s = sesionPorId(id);
+  if (!s) return;
+  sesionEditando = id;
+  var p = proyecto(s.proyectoId);
+  document.getElementById('ses-proyecto').textContent =
+    'Registro en «' + (p ? p.nombre : '(proyecto borrado)') + '»';
+  document.getElementById('ses-horas').value = s.horas;
+  var f = document.getElementById('ses-fecha');
+  f.value = s.fecha;
+  f.max = hoy();
+  document.getElementById('velo-sesion').classList.add('visible');
+}
+
+function guardarEdicionSesion(){
+  var s = sesionPorId(sesionEditando);
+  if (!s) return;
+  var horas = parseFloat(document.getElementById('ses-horas').value);
+  var fecha = document.getElementById('ses-fecha').value;
+  if (!horas || horas <= 0 || horas > 24){ toast('Indica unas horas válidas (entre 0.25 y 24).'); return; }
+  if (!fecha){ toast('Indica la fecha.'); return; }
+  if (fecha > hoy()){ toast('No puedes registrar horas del futuro. Ojalá.'); return; }
+  s.horas = Math.round(horas * 100) / 100;
+  s.fecha = fecha;
+  document.getElementById('velo-sesion').classList.remove('visible');
+  sesionEditando = null;
+  guardar(); render();
+  toast('Registro corregido.');
+}
+
+function borrarSesion(id){
+  var s = sesionPorId(id);
+  if (!s) return;
+  var p = proyecto(s.proyectoId);
+  confirmar('Borrar registro',
+    'Se borrará ' + fmtHoras(s.horas) + ' del ' + fmtFecha(s.fecha) +
+    ' en «' + (p ? p.nombre : '(borrado)') + '». El peaje, la racha y el calendario se recalcularán sin él.',
+    'Borrar', true, function(){
+      estado.sesiones = estado.sesiones.filter(function(x){ return x.id !== id; });
+      guardar(); render();
+      toast('Registro borrado.');
+    });
 }
 
 /* ================= EXPORTAR / IMPORTAR ================= */
@@ -1955,6 +2021,19 @@ function conectarEventos(){
   document.getElementById('btn-crono').addEventListener('click', alternarCrono);
   document.getElementById('btn-manual').addEventListener('click', guardarManual);
 
+  // Editar y borrar registros de tiempo (delegación en la lista de sesiones)
+  document.getElementById('lista-sesiones').addEventListener('click', function(ev){
+    var e = ev.target.closest('[data-editar-ses]');
+    if (e){ abrirEditarSesion(e.dataset.editarSes); return; }
+    var b = ev.target.closest('[data-borrar-ses]');
+    if (b){ borrarSesion(b.dataset.borrarSes); }
+  });
+  document.getElementById('ses-guardar').addEventListener('click', guardarEdicionSesion);
+  document.getElementById('ses-cancelar').addEventListener('click', function(){
+    document.getElementById('velo-sesion').classList.remove('visible');
+    sesionEditando = null;
+  });
+
   // Acciones dentro de las tarjetas de proyecto (delegación de eventos).
   // Se escucha también en el historial, donde viven las fichas de terminados.
   function accionesTarjeta(ev){
@@ -2007,11 +2086,7 @@ function conectarEventos(){
     var tarjeta = ev.target.closest('.proy');
     var p = proyecto(tarjeta.dataset.id);
     if (!p) return;
-    if (diasEstimadosDe(p)){
-      p.avanceExtra = parseInt(ev.target.value, 10);   // solo el 10% de reserva
-    } else {
-      p.avance = parseInt(ev.target.value, 10);
-    }
+    p.avance = parseInt(ev.target.value, 10);
     guardar();
     render();
   });
