@@ -454,7 +454,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v16 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v17 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -1230,6 +1230,32 @@ function tarjetaProyecto(p){
 
 // Mes que se está viendo en el calendario ({y, m}); null = mes actual
 var calMes = null;
+// Día seleccionado en el calendario ('YYYY-MM-DD'); null = ninguno
+var calDiaSel = null;
+
+// Pinta el detalle del día seleccionado: cada registro por separado,
+// con sus botones de editar y borrar (igual que en Sesiones de hoy)
+function renderCalDetalle(){
+  var panel = document.getElementById('cal-detalle');
+  if (!calDiaSel){ panel.style.display = 'none'; return; }
+  var sesiones = estado.sesiones.filter(function(s){ return s.fecha === calDiaSel; });
+  var total = 0;
+  sesiones.forEach(function(s){ total += s.horas; });
+  if (sesiones.length === 0){
+    panel.innerHTML = '<b>' + fmtFecha(calDiaSel) + '</b><p class="vacio" style="padding:6px 0 0">Sin horas registradas ese día.</p>';
+  } else {
+    panel.innerHTML = '<b>' + fmtFecha(calDiaSel) + ' · ' + fmtHoras(total) + '</b>' +
+      sesiones.map(function(s){
+        var p = proyecto(s.proyectoId);
+        return '<div class="ses-fila"><span class="pt" style="background:' + colorDeProyecto(s.proyectoId) + ';width:10px;height:10px;border-radius:3px;flex:none"></span>' +
+          '<b style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p ? p.nombre : '(borrado)') + '</b>' +
+          '<span class="der">' + fmtHoras(s.horas) + '</span>' +
+          '<button class="ses-btn" data-editar-ses="' + s.id + '" aria-label="Editar">' + ico('edit') + '</button>' +
+          '<button class="ses-btn" data-borrar-ses="' + s.id + '" aria-label="Borrar" style="color:var(--rojo)">' + ico('trash') + '</button></div>';
+      }).join('');
+  }
+  panel.style.display = 'block';
+}
 
 function renderHistorial(){
   var ahora = new Date();
@@ -1296,8 +1322,8 @@ function renderHistorial(){
     ? 'Total del mes: ' + fmtHoras(totalMes) + '.'
     : 'Sin horas registradas este mes.';
 
-  // Ocultar el detalle del día al cambiar de mes o recargar
-  document.getElementById('cal-detalle').style.display = 'none';
+  // Repintar el detalle del día seleccionado (se conserva tras editar)
+  renderCalDetalle();
 
   // Tiempo por proyecto (histórico completo, de más a menos horas)
   var conHoras = estado.proyectos.filter(function(p){ return horasTotales(p) > 0; })
@@ -2200,43 +2226,33 @@ function conectarEventos(){
   document.getElementById('lista-proyectos').addEventListener('click', accionesTarjeta);
   document.getElementById('hist-terminados').addEventListener('click', accionesTarjeta);
 
-  // Detalle de un día del calendario: horas por proyecto de ese día
+  // Detalle de un día del calendario: fijar el día y pintar sus registros
   document.getElementById('cal-grid').addEventListener('click', function(ev){
     var celda = ev.target.closest('.cal-dia[data-fecha]');
     if (!celda) return;
-    var fecha = celda.dataset.fecha;
-    var porProyecto = {};
-    var total = 0;
-    estado.sesiones.forEach(function(s){
-      if (s.fecha !== fecha) return;
-      porProyecto[s.proyectoId] = (porProyecto[s.proyectoId] || 0) + s.horas;
-      total += s.horas;
-    });
-    var panel = document.getElementById('cal-detalle');
-    var ids = Object.keys(porProyecto).sort(function(a, b){ return porProyecto[b] - porProyecto[a]; });
-    if (ids.length === 0){
-      panel.innerHTML = '<b>' + fmtFecha(fecha) + '</b><p class="vacio" style="padding:6px 0 0">Sin horas registradas ese día.</p>';
-    } else {
-      panel.innerHTML = '<b>' + fmtFecha(fecha) + ' · ' + fmtHoras(total) + '</b>' +
-        ids.map(function(id){
-          var p = proyecto(id);
-          return '<div class="hist-fila"><span class="pt" style="background:' + colorDeProyecto(id) + '"></span>' +
-            '<b>' + esc(p ? p.nombre : '(borrado)') + '</b>' +
-            '<span class="der">' + fmtHoras(porProyecto[id]) + '</span></div>';
-        }).join('');
-    }
-    panel.style.display = 'block';
+    calDiaSel = celda.dataset.fecha;
+    renderCalDetalle();
+  });
+
+  // Editar y borrar registros también desde el detalle del calendario
+  document.getElementById('cal-detalle').addEventListener('click', function(ev){
+    var e = ev.target.closest('[data-editar-ses]');
+    if (e){ abrirEditarSesion(e.dataset.editarSes); return; }
+    var b = ev.target.closest('[data-borrar-ses]');
+    if (b){ borrarSesion(b.dataset.borrarSes); }
   });
 
   // Navegación de meses del calendario
   document.getElementById('cal-prev').addEventListener('click', function(){
     calMes.m--;
     if (calMes.m < 0){ calMes.m = 11; calMes.y--; }
+    calDiaSel = null;
     renderHistorial();
   });
   document.getElementById('cal-sig').addEventListener('click', function(){
     calMes.m++;
     if (calMes.m > 11){ calMes.m = 0; calMes.y++; }
+    calDiaSel = null;
     renderHistorial();
   });
 
