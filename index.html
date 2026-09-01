@@ -328,10 +328,8 @@ nav button.on{color:var(--texto);background:var(--panel)}
       <h1>Gatekeeper<span>.</span></h1>
     </header>
 
-    <!-- ============ VISTA: PANEL (dashboard) ============ -->
-    <section class="vista visible" id="vista-panel">
-      <div id="zona-banner"></div>
-
+    <!-- ============ VISTA: MÉTRICAS ============ -->
+    <section class="vista" id="vista-panel">
       <div class="crd racha-crd">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-flame"/></svg> Racha en prioritarios</h2>
         <div class="racha">
@@ -346,11 +344,15 @@ nav button.on{color:var(--texto);background:var(--panel)}
       </div>
 
       <div class="crd">
-        <h2><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg> Peajes pendientes</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg> Bolsa de horas y peajes</h2>
+        <p class="nota" id="bolsa-linea" style="margin-bottom:10px"></p>
         <div id="lista-peajes"></div>
       </div>
 
-      <button class="btn btn-verde" id="btn-ir-crono"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg> Ponerme a trabajar</button>
+      <div class="crd">
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-zap"/></svg> Más métricas</h2>
+        <div id="metricas-extra"></div>
+      </div>
     </section>
 
     <!-- ============ VISTA: PROYECTOS ============ -->
@@ -358,8 +360,9 @@ nav button.on{color:var(--texto);background:var(--panel)}
       <div id="lista-proyectos"></div>
     </section>
 
-    <!-- ============ VISTA: TIEMPO ============ -->
-    <section class="vista" id="vista-tiempo">
+    <!-- ============ VISTA: TIEMPO (pantalla principal) ============ -->
+    <section class="vista visible" id="vista-tiempo">
+      <div id="zona-banner"></div>
       <div class="crd" id="crd-crono">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg> Cronómetro</h2>
         <label class="campo" id="campo-crono-proy"><span class="et">Proyecto</span>
@@ -386,7 +389,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
       </div>
 
       <div class="crd">
-        <h2><svg class="ico" aria-hidden="true"><use href="#i-calendar"/></svg> Últimas sesiones</h2>
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-calendar"/></svg> Sesiones de hoy</h2>
         <div id="lista-sesiones"></div>
       </div>
     </section>
@@ -401,6 +404,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
           <button id="cal-sig" aria-label="Mes siguiente">›</button>
         </div>
         <div class="cal-grid" id="cal-grid"></div>
+        <div id="cal-detalle" style="display:none;background:var(--panel);border-radius:12px;padding:12px;margin-top:12px"></div>
         <div class="cal-leyenda" id="cal-leyenda"></div>
         <p class="nota" id="cal-total" style="margin-top:10px"></p>
       </div>
@@ -450,7 +454,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v15 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v16 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -461,9 +465,9 @@ nav button.on{color:var(--texto);background:var(--panel)}
 
 <!-- ============ NAVEGACIÓN INFERIOR ============ -->
 <nav>
-  <button data-vista="panel" class="on"><svg class="ico ni" aria-hidden="true"><use href="#i-home"/></svg>Panel</button>
+  <button data-vista="tiempo" class="on"><svg class="ico ni" aria-hidden="true"><use href="#i-clock"/></svg>Tiempo</button>
+  <button data-vista="panel"><svg class="ico ni" aria-hidden="true"><use href="#i-chart"/></svg>Métricas</button>
   <button data-vista="proyectos"><svg class="ico ni" aria-hidden="true"><use href="#i-folder"/></svg>Proyectos</button>
-  <button data-vista="tiempo"><svg class="ico ni" aria-hidden="true"><use href="#i-clock"/></svg>Tiempo</button>
   <button data-vista="historial"><svg class="ico ni" aria-hidden="true"><use href="#i-calendar"/></svg>Historial</button>
   <button data-vista="ajustes"><svg class="ico ni" aria-hidden="true"><use href="#i-settings"/></svg>Ajustes</button>
 </nav>
@@ -507,10 +511,10 @@ nav button.on{color:var(--texto);background:var(--panel)}
 
     <label class="campo"><span class="et">Tu estimación de duración (días)</span>
       <input type="number" id="np-dias" min="1" max="3650" step="1" placeholder="10" inputmode="numeric">
-      <span class="nota">El avance se llenará solo (hasta el 90%) según registres días de trabajo; el 10% final lo mueves tú.</span>
+      <span class="nota">La barra de avance se llenará sola según registres días de trabajo; al llegar al 100% podrás extender la estimación.</span>
     </label>
     <label class="campo"><span class="et">% ya completado (si vienes con parte hecha)</span>
-      <input type="number" id="np-inicial" min="0" max="89" step="5" placeholder="0" inputmode="numeric">
+      <input type="number" id="np-inicial" min="0" max="99" step="5" placeholder="0" inputmode="numeric">
       <span class="nota">Para proyectos antiguos: el avance automático partirá de este punto.</span>
     </label>
 
@@ -531,8 +535,9 @@ nav button.on{color:var(--texto);background:var(--panel)}
         La IA hará su propia estimación de duración <b>sin ver la tuya</b>, y la duración
         final será la <b>media de las dos</b>. El peaje será de 1h por día de esa media…
         salvo que la ruleta (1 de cada 10) salga con premio y lo deje sin peaje.
-        Se paga trabajando en tus prioritarios: <b>1h de tesis descuenta 1h</b>;
-        <b>1h de AI research descuenta 45 min</b>. Y ojo: si te pasas de los días
+        El peaje se canjea con la <b>bolsa de horas</b> (1h de tesis llena 1h;
+        1h de AI research, 45 min) y cada canje la consume: el siguiente
+        desbloqueo exige volver a llenarla. Y ojo: si te pasas de los días
         estimados, cada día extra de trabajo costará 30 min más de prioritario.
       </p>
       <p class="nota nota-aviso" id="np-sin-ia" style="display:none;margin-bottom:12px">
@@ -602,7 +607,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
 var CLAVE_DATOS = 'gatekeeper_v1';       // clave única en localStorage
 var MAX_ACTIVOS = 3;                     // máximo de proyectos activos a la vez
 var HORAS_POR_DIA = 1;                   // horas de peaje (en tesis) por día estimado
-var MAX_BLOQUEADOS = 3;                  // máximo de proyectos bloqueados en cola
+var MAX_BLOQUEADOS = 5;                  // máximo de proyectos bloqueados en cola
 var HORAS_DIA_EXTRA = 0.5;               // coste en prioritarios de cada día que exceda la estimación
 var DIAS_AVISO = 5;                      // días sin prioritario antes del banner rojo
 var PENALIZACION = 0.10;                 // +10% de peaje al borrar un bloqueado
@@ -706,6 +711,7 @@ function esc(t){
 
 function datosVacios(){
   return { version:1, proyectos:[], sesiones:[], crono:null,
+           bolsaGastada:0, eliminados:[],
            config:{ orClave:'', orModelo:MODELO_DEFECTO } };
 }
 
@@ -714,6 +720,8 @@ function normalizarConfig(datos){
   if (!datos.config) datos.config = { orClave:'', orModelo:MODELO_DEFECTO };
   if (!datos.config.orModelo) datos.config.orModelo = MODELO_DEFECTO;
   if (typeof datos.config.orClave !== 'string') datos.config.orClave = '';
+  if (typeof datos.bolsaGastada !== 'number') datos.bolsaGastada = 0;
+  if (!Array.isArray(datos.eliminados)) datos.eliminados = [];
 }
 
 // Intenta cargar de localStorage. Si falla, activa la pantalla de rescate.
@@ -767,26 +775,31 @@ function proyectosRegistrables(){
   });
 }
 
-// Horas de peaje ya pagadas para un proyecto bloqueado: cuentan las sesiones
-// en CUALQUIER proyecto prioritario desde la creación del bloqueado, con
-// cambio de moneda: 1h de tesis descuenta 1h; 1h de AI research (u otro
-// prioritario), 0.75h (porque 1.5h de tesis ≡ 2h de AI research).
+// Bolsa de horas: todas las horas registradas en prioritarios (con cambio
+// de moneda: 1h de tesis = 1h; 1h de AI research = 0.75h) MENOS lo ya
+// gastado en canjear desbloqueos. Canjear un peaje consume la bolsa, así
+// que el siguiente desbloqueo exige volver a llenarla.
+function bolsaDisponible(){
+  var ganado = 0;
+  estado.sesiones.forEach(function(s){
+    if (!s.prioritario) return;
+    var tipoSesion = s.tipo || (proyecto(s.proyectoId) ? proyecto(s.proyectoId).tipo : 'tesis');
+    ganado += s.horas * (tipoSesion === 'tesis' ? 1 : FACTOR_NO_TESIS);
+  });
+  return Math.max(0, ganado - (estado.bolsaGastada || 0));
+}
+
+// Progreso del peaje de un bloqueado: lo que la bolsa cubre de su coste
 function horasPeajePagadas(p){
   if (!p.peaje) return 0;
-  var desde = p.creadoEn.slice(0,10);
-  var total = 0;
-  estado.sesiones.forEach(function(s){
-    if (!s.prioritario || s.fecha < desde) return;
-    // El tipo se guarda en la sesión; para sesiones antiguas se mira el proyecto
-    var tipoSesion = s.tipo || (proyecto(s.proyectoId) ? proyecto(s.proyectoId).tipo : 'tesis');
-    total += s.horas * (tipoSesion === 'tesis' ? 1 : FACTOR_NO_TESIS);
-  });
-  return total;
+  if (p.peaje.premiado) return p.peaje.horas;
+  return Math.min(bolsaDisponible(), p.peaje.horas);
 }
 
 function peajeCompleto(p){
-  // El peaje se completa pagándolo... o con el premio por terminar un prioritario
-  return p.peaje && (p.peaje.premiado || horasPeajePagadas(p) >= p.peaje.horas - 0.001);
+  // El peaje se completa con la bolsa llena... o con un premio (ruleta o
+  // terminar un prioritario), que no consume bolsa
+  return p.peaje && (p.peaje.premiado || bolsaDisponible() >= p.peaje.horas - 0.001);
 }
 
 // Días distintos en los que se ha registrado tiempo en un proyecto
@@ -845,25 +858,25 @@ function puedeTrabajarDiaExtra(p, fecha){
   };
 }
 
-// Días estimados de un proyecto: los bloqueados los llevan en el peaje,
-// los prioritarios en su propio campo (diasEstimados)
+// Días estimados de un proyecto: el campo propio (que crece con las
+// extensiones) manda; si no, la estimación declarada al crear el peaje
 function diasEstimadosDe(p){
+  if (p.diasEstimados) return p.diasEstimados;
   if (p.peaje && p.peaje.diasUsuario) return p.peaje.diasUsuario;
-  return p.diasEstimados || null;
+  return null;
 }
 
-// Avance de un proyecto. Con estimación de días, el avance se gana
-// trabajando: parte del % inicial declarado al crearlo (por si el
-// proyecto venía con parte hecha) y cada día con tiempo registrado suma
-// su parte proporcional del tramo restante HASTA EL 90%; el 10% final es
-// un ajuste manual. Sin estimación (prioritarios antiguos), manual puro.
+// Avance de un proyecto. Con estimación de días, la barra se llena sola:
+// parte del % inicial declarado al crearlo (por si venía con parte hecha)
+// y cada día con tiempo registrado suma su parte del tramo restante hasta
+// el 100%. Al llegar al 100%, la app pregunta cuántos días más hacen
+// falta y la estimación se extiende. Sin estimación, avance manual.
 function avanceDe(p){
   if (p.estado === 'terminado') return 100;
   var est = diasEstimadosDe(p);
   if (est){
-    var base = Math.min(89, p.avanceInicial || 0);
-    var auto = Math.min(90, base + (diasTrabajados(p) / est) * (90 - base));
-    return Math.min(100, Math.round(auto + (p.avanceExtra || 0)));
+    var base = Math.min(99, p.avanceInicial || 0);
+    return Math.min(100, Math.round(base + (diasTrabajados(p) / est) * (100 - base)));
   }
   return p.avance || 0;
 }
@@ -921,6 +934,22 @@ function registrarSesion(proyectoId, horas, fecha, manual){
     tipo: p.tipo,     // para el cambio de moneda del peaje (tesis vale más)
     manual: !!manual
   });
+
+  // ¿La barra acaba de llegar al 100% de los días estimados? Preguntar
+  // cuántos días más hacen falta para extender la estimación
+  var est = diasEstimadosDe(p);
+  if (est && diasTrabajados(p) >= est){
+    setTimeout(function(){
+      var r = window.prompt('«' + p.nombre + '» ha llegado al 100% de sus días estimados (' + est +
+        '). Si aún no está terminado, ¿cuántos días MÁS estimas que te llevará? (cancela si ya casi está)');
+      var extra = parseInt(r, 10);
+      if (r !== null && extra > 0){
+        p.diasEstimados = est + extra;
+        guardar(); render();
+        toast('Estimación extendida a ' + p.diasEstimados + ' días. La barra se recalcula.');
+      }
+    }, 600);
+  }
 
   // ¿Algún proyecto bloqueado acaba de completar su peaje?
   var desbloqueables = [];
@@ -1040,7 +1069,10 @@ function renderPanel(){
     g.innerHTML = html;
   }
 
-  // Peajes pendientes
+  // Bolsa de horas y peajes pendientes
+  document.getElementById('bolsa-linea').innerHTML =
+    'Bolsa disponible: <b style="color:var(--texto)">' + fmtHoras(bolsaDisponible()) + '</b>' +
+    ' · se llena con horas de prioritarios (1h tesis = 1h · 1h AI research = 45 min) y cada canje la consume.';
   var bloqueados = porEstado('bloqueado');
   var lp = document.getElementById('lista-peajes');
   if (bloqueados.length === 0){
@@ -1055,11 +1087,31 @@ function renderPanel(){
         '<div class="barra ' + (pct >= 100 ? 'barra-verde' : 'barra-ambar') + '"><div style="width:' + pct + '%"></div></div>' +
         '<div class="peaje-det">' + (pct >= 100
             ? 'Peaje completado: desbloquéalo desde Proyectos'
-            : 'Se paga en prioritarios (1h tesis = 1h · 1h AI research = 45 min) · ' + pct + '%') +
+            : 'Canjear consumirá ' + fmtHoras(p.peaje.horas) + ' de la bolsa · ' + pct + '%') +
         '</div></div>';
     });
     lp.innerHTML = html2;
   }
+
+  // Métricas extra: mes en curso, media diaria y balances
+  var prefijoMes = hoy().slice(0, 7) + '-';
+  var totalMesActual = 0;
+  var hace7 = 0;
+  var corte7 = claveDia(new Date(Date.now() - 6 * 86400000));
+  estado.sesiones.forEach(function(s){
+    if (s.fecha.indexOf(prefijoMes) === 0) totalMesActual += s.horas;
+    if (s.fecha >= corte7 && s.fecha <= hoy()) hace7 += s.horas;
+  });
+  var filasMet = [
+    ['Horas este mes', fmtHoras(totalMesActual)],
+    ['Media diaria (últimos 7 días)', fmtHoras(Math.round(hace7 / 7 * 100) / 100)],
+    ['Proyectos terminados', String(porEstado('terminado').length)],
+    ['Proyectos abandonados', String((estado.eliminados || []).length)],
+    ['Bloqueados en cola', porEstado('bloqueado').length + ' de ' + MAX_BLOQUEADOS]
+  ];
+  document.getElementById('metricas-extra').innerHTML = filasMet.map(function(f){
+    return '<div class="ses-fila"><b>' + f[0] + '</b><span class="der">' + f[1] + '</span></div>';
+  }).join('');
 }
 
 /* ----- Lista de proyectos ----- */
@@ -1132,7 +1184,9 @@ function tarjetaProyecto(p){
            ' al ' + fmtFecha(p.terminadoEn.slice(0,10)) +
            ' (' + (diasEntre(p.creadoEn.slice(0,10), p.terminadoEn.slice(0,10)) + 1) + ' días de calendario)</div>';
     }
-    h += '<div class="proy-acciones"><button class="btn btn-borde btn-chico" data-accion="borrar-simple">' + ico('trash') + ' Borrar</button></div>';
+    h += '<div class="proy-acciones">' +
+         '<button class="btn btn-azul btn-chico" data-accion="reabrir">' + ico('play') + ' Reabrir</button>' +
+         '<button class="btn btn-borde btn-chico" data-accion="borrar-simple">' + ico('trash') + ' Borrar</button></div>';
 
   } else {
     // prioritario / activo / pausado: avance y acciones
@@ -1145,12 +1199,10 @@ function tarjetaProyecto(p){
            fmtHoras(HORAS_DIA_EXTRA) + ' en un prioritario</div>';
     }
     if (estDias){
-      // Avance automático (desde el % inicial, hasta el 90%) + ajuste manual del 10%
+      // Barra automática: se llena sola con los días trabajados, sin deslizador
       h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b> · ' +
            diasTrabajados(p) + ' de ' + estDias + ' días trabajados</div>' +
-           '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
-           '<input type="range" min="0" max="10" step="1" value="' + (p.avanceExtra || 0) + '" data-accion="avance" aria-label="Ajuste manual">' +
-           '<div class="proy-avance" style="margin-top:0">Ajuste manual: +' + (p.avanceExtra || 0) + '% (el resto se gana registrando días de trabajo)</div>';
+           '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>';
     } else {
       h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b></div>' +
            '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
@@ -1213,7 +1265,7 @@ function renderHistorial(){
   for (var d = 1; d <= diasMes; d++){
     var dd = String(d).padStart(2, '0');
     var esHoy = (prefijo + dd) === claveHoy;
-    html += '<div class="cal-dia' + (esHoy ? ' hoy' : '') + '"><span class="n">' + d + '</span>';
+    html += '<div class="cal-dia' + (esHoy ? ' hoy' : '') + '" data-fecha="' + prefijo + dd + '"><span class="n">' + d + '</span>';
     var datos = porDia[dd];
     if (datos){
       // Barra apilada: cada proyecto ocupa su proporción de las horas del día
@@ -1244,6 +1296,9 @@ function renderHistorial(){
     ? 'Total del mes: ' + fmtHoras(totalMes) + '.'
     : 'Sin horas registradas este mes.';
 
+  // Ocultar el detalle del día al cambiar de mes o recargar
+  document.getElementById('cal-detalle').style.display = 'none';
+
   // Tiempo por proyecto (histórico completo, de más a menos horas)
   var conHoras = estado.proyectos.filter(function(p){ return horasTotales(p) > 0; })
     .sort(function(a, b){ return horasTotales(b) - horasTotales(a); });
@@ -1256,11 +1311,24 @@ function renderHistorial(){
           '<span class="der">' + fmtHoras(horasTotales(p)) + ' · ' + nDias + ' día' + (nDias === 1 ? '' : 's') + '</span></div>';
       }).join('');
 
-  // Fichas completas de los proyectos terminados
+  // Fichas completas de los proyectos terminados + registro de abandonados
   var terminados = porEstado('terminado');
-  document.getElementById('hist-terminados').innerHTML = terminados.length === 0 ? '' :
+  var htmlTerm = terminados.length === 0 ? '' :
     '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);margin:16px 4px 10px">Terminados</h2>' +
     terminados.map(tarjetaProyecto).join('');
+
+  var elim = (estado.eliminados || []).slice().reverse();
+  if (elim.length > 0){
+    htmlTerm += '<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);margin:16px 4px 10px">Abandonados</h2>' +
+      '<div class="crd">' + elim.map(function(e){
+        var detalle = e.nuncaDesbloqueado
+          ? 'nunca llegó a desbloquearse'
+          : (e.horas > 0 ? fmtHoras(e.horas) + ' en ' + e.dias + ' día' + (e.dias === 1 ? '' : 's') : 'sin horas registradas');
+        return '<div class="ses-fila"><b style="color:var(--gris)">' + esc(e.nombre) + '</b>' +
+          '<span class="der">' + detalle + ' · borrado el ' + fmtFecha(e.borradoEn.slice(0,10)) + '</span></div>';
+      }).join('') + '</div>';
+  }
+  document.getElementById('hist-terminados').innerHTML = htmlTerm;
 }
 
 /* ----- Vista tiempo: cronómetro, manual, sesiones ----- */
@@ -1287,12 +1355,13 @@ function renderTiempo(){
 
   renderCrono();
 
-  // Últimas 10 sesiones
+  // Sesiones registradas HOY (editables por si hay errores)
   var lista = document.getElementById('lista-sesiones');
-  if (estado.sesiones.length === 0){
-    lista.innerHTML = '<p class="vacio">Sin sesiones todavía.</p>';
+  var deHoy = estado.sesiones.filter(function(s){ return s.fecha === hoy(); });
+  if (deHoy.length === 0){
+    lista.innerHTML = '<p class="vacio">Hoy aún no has registrado nada. El cronómetro no muerde.</p>';
   } else {
-    var ult = estado.sesiones.slice(-10).reverse();
+    var ult = deHoy.slice().reverse();
     lista.innerHTML = ult.map(function(s){
       var p = proyecto(s.proyectoId);
       return '<div class="ses-fila"><b><span style="color:var(--' + (s.prioritario ? 'verde' : 'azul') + ')">●</span> ' +
@@ -1344,14 +1413,22 @@ function actualizarTiempoCrono(){
 
 // Desbloquear un proyecto con el peaje ya pagado (respetando el límite de activos)
 function desbloquear(p){
-  if (!peajeCompleto(p)){ toast('El peaje aún no está pagado.'); return; }
+  if (!peajeCompleto(p)){ toast('La bolsa de horas aún no cubre este peaje.'); return; }
   if (porEstado('activo').length >= MAX_ACTIVOS){
     toast('Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes de desbloquear este.', 4500);
     return;
   }
   p.estado = 'activo';
-  guardar(); render();
-  toast('«' + p.nombre + '» desbloqueado y activo. A por él.');
+  if (p.peaje && !p.peaje.premiado){
+    // Canjear consume la bolsa: el siguiente peaje exige volver a llenarla
+    estado.bolsaGastada = (estado.bolsaGastada || 0) + p.peaje.horas;
+    guardar(); render();
+    toast('«' + p.nombre + '» desbloqueado: el canje consume ' + fmtHoras(p.peaje.horas) +
+      ' de la bolsa (quedan ' + fmtHoras(bolsaDisponible()) + ').', 5000);
+  } else {
+    guardar(); render();
+    toast('«' + p.nombre + '» desbloqueado y activo. A por él.');
+  }
 }
 
 // Reactivar un proyecto pausado (respetando el límite de activos)
@@ -1398,10 +1475,9 @@ function ofrecerPremio(){
   var bloqueados = porEstado('bloqueado');
   if (bloqueados.length === 0) return;
   document.getElementById('premio-lista').innerHTML = bloqueados.map(function(b){
-    var pagadas = horasPeajePagadas(b);
     return '<button class="btn btn-borde" data-premio="' + b.id + '" style="margin-bottom:10px;text-align:left">' +
       ico('unlock') + ' ' + esc(b.nombre) +
-      ' <span style="color:var(--gris);font-weight:400">(' + fmtHoras(pagadas) + ' / ' + fmtHoras(b.peaje.horas) + ' pagadas)</span></button>';
+      ' <span style="color:var(--gris);font-weight:400">(peaje de ' + fmtHoras(b.peaje.horas) + ')</span></button>';
   }).join('');
   document.getElementById('velo-premio').classList.add('visible');
 }
@@ -1444,9 +1520,20 @@ function borrarSimple(p){
     });
 }
 
-// Quita el proyecto y todo lo asociado a él (sesiones y cronómetro en marcha)
+// Quita el proyecto y todo lo asociado a él (sesiones y cronómetro en
+// marcha), dejando constancia en el registro de abandonados del historial
 function eliminarProyecto(id){
-  estado.proyectos = estado.proyectos.filter(function(p){ return p.id !== id; });
+  var p = proyecto(id);
+  if (p && p.estado !== 'terminado'){
+    estado.eliminados.push({
+      nombre: p.nombre, tipo: p.tipo,
+      estadoFinal: p.estado,                      // en qué estado murió
+      nuncaDesbloqueado: p.estado === 'bloqueado',
+      horas: horasTotales(p), dias: diasTrabajados(p),
+      creadoEn: p.creadoEn, borradoEn: new Date().toISOString()
+    });
+  }
+  estado.proyectos = estado.proyectos.filter(function(x){ return x.id !== id; });
   estado.sesiones = estado.sesiones.filter(function(s){ return s.proyectoId !== id; });
   if (estado.crono && estado.crono.proyectoId === id) estado.crono = null;
 }
@@ -1717,7 +1804,7 @@ function intentarCrearProyecto(){
   var diasUsuario = parseInt(document.getElementById('np-dias').value, 10);
   if (!diasUsuario || diasUsuario < 1){ toast('Indica tu estimación de duración en días.'); return; }
   var avanceInicial = parseInt(document.getElementById('np-inicial').value, 10) || 0;
-  if (avanceInicial < 0 || avanceInicial > 89){ toast('El % ya completado debe estar entre 0 y 89.'); return; }
+  if (avanceInicial < 0 || avanceInicial > 99){ toast('El % ya completado debe estar entre 0 y 99.'); return; }
 
   // Prioritario: sin peaje ni media con la IA, pero con estimación de días
   // para que el avance se llene solo al trabajar
@@ -1800,8 +1887,8 @@ function crearProyecto(nombre, tipo, descripcion, esPrio, peaje, sinToast, diasE
   var p = {
     id: uid(), nombre: nombre, tipo: tipo, descripcion: descripcion,
     estado: esPrio ? 'prioritario' : 'bloqueado',
-    avance: 0, avanceExtra: 0,
-    avanceInicial: Math.min(89, avanceInicial || 0),   // por si venía con parte hecha
+    avance: 0,
+    avanceInicial: Math.min(99, avanceInicial || 0),   // por si venía con parte hecha
     diasEstimados: esPrio ? (diasEstimados || null) : null,
     creadoEn: new Date().toISOString(),
     peaje: esPrio ? null : peaje
@@ -2023,7 +2110,6 @@ function conectarEventos(){
   document.querySelectorAll('nav button').forEach(function(b){
     b.addEventListener('click', function(){ irA(b.dataset.vista); });
   });
-  document.getElementById('btn-ir-crono').addEventListener('click', function(){ irA('tiempo'); });
 
   // FAB nuevo proyecto
   document.getElementById('fab-nuevo').addEventListener('click', abrirNuevoProyecto);
@@ -2078,6 +2164,26 @@ function conectarEventos(){
       case 'terminar':         terminar(p); break;
       case 'borrar-bloqueado': borrarBloqueado(p); break;
       case 'borrar-simple':    borrarSimple(p); break;
+      case 'reabrir': {
+        // Reabrir un terminado: vuelve como prioritario si su tipo lo permite,
+        // como activo si hay hueco, o pausado si no lo hay
+        confirmar('Reabrir «' + p.nombre + '»',
+          'Volverá a estar en marcha y podrás registrar horas en él de nuevo.',
+          'Reabrir', false, function(){
+            if (puedeSerPrioritario(p.tipo)){
+              p.estado = 'prioritario';
+            } else if (porEstado('activo').length < MAX_ACTIVOS){
+              p.estado = 'activo';
+            } else {
+              p.estado = 'pausado';
+              toast('Reabierto como pausado: ya tienes ' + MAX_ACTIVOS + ' activos.', 4500);
+            }
+            p.terminadoEn = null;
+            guardar(); render();
+            toast('«' + p.nombre + '» reabierto. Segunda ronda.');
+          });
+        break;
+      }
       case 'estimar-dias': {
         // Migración amable: prioritarios creados antes de que existiera la estimación
         var r = window.prompt('¿Cuántos días estimas que tardarás en terminar «' + p.nombre + '»?');
@@ -2093,6 +2199,34 @@ function conectarEventos(){
   }
   document.getElementById('lista-proyectos').addEventListener('click', accionesTarjeta);
   document.getElementById('hist-terminados').addEventListener('click', accionesTarjeta);
+
+  // Detalle de un día del calendario: horas por proyecto de ese día
+  document.getElementById('cal-grid').addEventListener('click', function(ev){
+    var celda = ev.target.closest('.cal-dia[data-fecha]');
+    if (!celda) return;
+    var fecha = celda.dataset.fecha;
+    var porProyecto = {};
+    var total = 0;
+    estado.sesiones.forEach(function(s){
+      if (s.fecha !== fecha) return;
+      porProyecto[s.proyectoId] = (porProyecto[s.proyectoId] || 0) + s.horas;
+      total += s.horas;
+    });
+    var panel = document.getElementById('cal-detalle');
+    var ids = Object.keys(porProyecto).sort(function(a, b){ return porProyecto[b] - porProyecto[a]; });
+    if (ids.length === 0){
+      panel.innerHTML = '<b>' + fmtFecha(fecha) + '</b><p class="vacio" style="padding:6px 0 0">Sin horas registradas ese día.</p>';
+    } else {
+      panel.innerHTML = '<b>' + fmtFecha(fecha) + ' · ' + fmtHoras(total) + '</b>' +
+        ids.map(function(id){
+          var p = proyecto(id);
+          return '<div class="hist-fila"><span class="pt" style="background:' + colorDeProyecto(id) + '"></span>' +
+            '<b>' + esc(p ? p.nombre : '(borrado)') + '</b>' +
+            '<span class="der">' + fmtHoras(porProyecto[id]) + '</span></div>';
+        }).join('');
+    }
+    panel.style.display = 'block';
+  });
 
   // Navegación de meses del calendario
   document.getElementById('cal-prev').addEventListener('click', function(){
@@ -2112,11 +2246,7 @@ function conectarEventos(){
     var tarjeta = ev.target.closest('.proy');
     var p = proyecto(tarjeta.dataset.id);
     if (!p) return;
-    if (diasEstimadosDe(p)){
-      p.avanceExtra = parseInt(ev.target.value, 10);   // el 10% de reserva
-    } else {
-      p.avance = parseInt(ev.target.value, 10);
-    }
+    p.avance = parseInt(ev.target.value, 10);   // solo proyectos sin estimación
     guardar();
     render();
   });
@@ -2223,7 +2353,7 @@ if (errorCarga){
 } else {
   conectarEventos();
   render();
-  irA('panel');
+  irA('tiempo');
 }
 
 // Registrar el service worker para que la app funcione sin conexión.
