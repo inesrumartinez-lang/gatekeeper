@@ -353,6 +353,44 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-zap"/></svg> Más métricas</h2>
         <div id="metricas-extra"></div>
       </div>
+
+      <div class="crd">
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg> Explorador (a tu medida)</h2>
+        <label class="campo"><span class="et">Proyecto</span>
+          <select id="fx-proyecto"><option value="">Todos</option></select>
+        </label>
+        <label class="campo"><span class="et">Categoría</span>
+          <select id="fx-tipo">
+            <option value="">Todas</option>
+            <option value="tesis">Tesis</option>
+            <option value="airesearch">AI research</option>
+            <option value="freelance">Freelance</option>
+            <option value="personal">Personal</option>
+            <option value="otro">Otro</option>
+          </select>
+        </label>
+        <label class="campo"><span class="et">Periodo</span>
+          <select id="fx-periodo">
+            <option value="hoy">Hoy</option>
+            <option value="7">Últimos 7 días</option>
+            <option value="30" selected>Últimos 30 días</option>
+            <option value="mes">Este mes</option>
+            <option value="mespasado">Mes pasado</option>
+            <option value="ano">Este año</option>
+            <option value="todo">Todo</option>
+            <option value="custom">Personalizado…</option>
+          </select>
+        </label>
+        <div style="display:flex;gap:10px">
+          <label class="campo" style="flex:1"><span class="et">Desde</span>
+            <input type="date" id="fx-desde">
+          </label>
+          <label class="campo" style="flex:1"><span class="et">Hasta</span>
+            <input type="date" id="fx-hasta">
+          </label>
+        </div>
+        <div id="fx-resultado"></div>
+      </div>
     </section>
 
     <!-- ============ VISTA: PROYECTOS ============ -->
@@ -454,7 +492,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v17 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v18 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -1112,6 +1150,101 @@ function renderPanel(){
   document.getElementById('metricas-extra').innerHTML = filasMet.map(function(f){
     return '<div class="ses-fila"><b>' + f[0] + '</b><span class="der">' + f[1] + '</span></div>';
   }).join('');
+
+  renderExplorador();
+}
+
+/* ----- Explorador de métricas: filtros por proyecto, categoría y fechas ----- */
+
+// Rango de fechas de cada periodo predefinido ({desde, hasta} o vacíos)
+function rangoPeriodo(clave){
+  var h = hoy();
+  if (clave === 'hoy') return { desde: h, hasta: h };
+  if (clave === '7') return { desde: claveDia(new Date(Date.now() - 6 * 86400000)), hasta: h };
+  if (clave === '30') return { desde: claveDia(new Date(Date.now() - 29 * 86400000)), hasta: h };
+  if (clave === 'mes') return { desde: h.slice(0, 8) + '01', hasta: h };
+  if (clave === 'mespasado'){
+    var d = new Date(); d.setDate(1); d.setDate(0);   // último día del mes pasado
+    var fin = claveDia(d);
+    return { desde: fin.slice(0, 8) + '01', hasta: fin };
+  }
+  if (clave === 'ano') return { desde: h.slice(0, 4) + '-01-01', hasta: h };
+  return { desde: '', hasta: '' };   // todo
+}
+
+// Rellena el selector de proyectos del explorador conservando la selección
+function llenarFiltroProyectos(){
+  var sel = document.getElementById('fx-proyecto');
+  var valor = sel.value;
+  sel.innerHTML = '<option value="">Todos</option>' + estado.proyectos.map(function(p){
+    return '<option value="' + p.id + '">' + esc(p.nombre) + '</option>';
+  }).join('');
+  if (valor && proyecto(valor)) sel.value = valor;
+}
+
+// Calcula y pinta las métricas con los filtros elegidos
+function renderExplorador(){
+  llenarFiltroProyectos();
+  var fProyecto = document.getElementById('fx-proyecto').value;
+  var fTipo = document.getElementById('fx-tipo').value;
+  var desde = document.getElementById('fx-desde').value;
+  var hasta = document.getElementById('fx-hasta').value;
+
+  var filtradas = estado.sesiones.filter(function(s){
+    if (fProyecto && s.proyectoId !== fProyecto) return false;
+    if (fTipo){
+      var tipoS = s.tipo || (proyecto(s.proyectoId) ? proyecto(s.proyectoId).tipo : '');
+      if (tipoS !== fTipo) return false;
+    }
+    if (desde && s.fecha < desde) return false;
+    if (hasta && s.fecha > hasta) return false;
+    return true;
+  });
+
+  var salida = document.getElementById('fx-resultado');
+  if (filtradas.length === 0){
+    salida.innerHTML = '<p class="vacio">Nada registrado con esos filtros.</p>';
+    return;
+  }
+
+  var total = 0, dias = {}, porProyecto = {}, porDia = {};
+  filtradas.forEach(function(s){
+    total += s.horas;
+    dias[s.fecha] = true;
+    porProyecto[s.proyectoId] = (porProyecto[s.proyectoId] || 0) + s.horas;
+    porDia[s.fecha] = (porDia[s.fecha] || 0) + s.horas;
+  });
+  var nDias = Object.keys(dias).length;
+  var mejorDia = null;
+  Object.keys(porDia).forEach(function(f){
+    if (mejorDia === null || porDia[f] > porDia[mejorDia]) mejorDia = f;
+  });
+
+  var filas = [
+    ['Total', fmtHoras(total)],
+    ['Registros', String(filtradas.length)],
+    ['Días trabajados', String(nDias)],
+    ['Media por día trabajado', fmtHoras(Math.round(total / nDias * 100) / 100)],
+    ['Mejor día', fmtFecha(mejorDia) + ' (' + fmtHoras(porDia[mejorDia]) + ')']
+  ];
+  var html = filas.map(function(f){
+    return '<div class="ses-fila"><b>' + f[0] + '</b><span class="der">' + f[1] + '</span></div>';
+  }).join('');
+
+  // Desglose por proyecto (barras, de más a menos) cuando no se filtra a uno solo
+  var ids = Object.keys(porProyecto).sort(function(a, b){ return porProyecto[b] - porProyecto[a]; });
+  if (ids.length > 1){
+    var max = porProyecto[ids[0]];
+    html += '<hr class="sep">' + ids.map(function(id){
+      var p = proyecto(id);
+      var ancho = Math.max(4, Math.round(porProyecto[id] / max * 100));
+      return '<div class="gsem-fila"><div class="gsem-cab"><b><span class="pt" style="background:' +
+        colorDeProyecto(id) + ';width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:6px"></span>' +
+        esc(p ? p.nombre : '(borrado)') + '</b><span>' + fmtHoras(porProyecto[id]) + '</span></div>' +
+        '<div class="barra barra-verde"><div style="width:' + ancho + '%;background:' + colorDeProyecto(id) + '"></div></div></div>';
+    }).join('');
+  }
+  salida.innerHTML = html;
 }
 
 /* ----- Lista de proyectos ----- */
@@ -2285,6 +2418,29 @@ function conectarEventos(){
   });
   document.getElementById('premio-nada').addEventListener('click', function(){
     document.getElementById('velo-premio').classList.remove('visible');
+  });
+
+  // Explorador de métricas: cambios en los filtros
+  var periodoInicial = rangoPeriodo('30');
+  document.getElementById('fx-desde').value = periodoInicial.desde;
+  document.getElementById('fx-hasta').value = periodoInicial.hasta;
+  document.getElementById('fx-proyecto').addEventListener('change', renderExplorador);
+  document.getElementById('fx-tipo').addEventListener('change', renderExplorador);
+  document.getElementById('fx-periodo').addEventListener('change', function(){
+    var clave = this.value;
+    if (clave !== 'custom'){
+      var r = rangoPeriodo(clave);
+      document.getElementById('fx-desde').value = r.desde;
+      document.getElementById('fx-hasta').value = r.hasta;
+    }
+    renderExplorador();
+  });
+  // Tocar las fechas a mano pasa el periodo a "Personalizado"
+  ['fx-desde', 'fx-hasta'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(){
+      document.getElementById('fx-periodo').value = 'custom';
+      renderExplorador();
+    });
   });
 
   // Ajustes: configuración de la IA (OpenRouter)
