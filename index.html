@@ -492,7 +492,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v18 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v19 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -586,6 +586,21 @@ nav button.on{color:var(--texto);background:var(--panel)}
     <div class="fila-btns" style="margin-top:8px">
       <button class="btn btn-borde" id="np-cancelar">Cancelar</button>
       <button class="btn btn-verde" id="np-crear">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: PEDIR NÚMERO DE DÍAS ============ -->
+<div class="velo" id="velo-dias">
+  <div class="hoja">
+    <h3 id="dias-titulo"></h3>
+    <div class="msj" id="dias-msj"></div>
+    <label class="campo"><span class="et" id="dias-etiqueta">Días</span>
+      <input type="number" id="dias-valor" min="1" max="3650" step="1" inputmode="numeric">
+    </label>
+    <div class="fila-btns">
+      <button class="btn btn-borde" id="dias-cancelar">Cancelar</button>
+      <button class="btn btn-verde" id="dias-guardar">Guardar</button>
     </div>
   </div>
 </div>
@@ -965,6 +980,10 @@ function registrarSesion(proyectoId, horas, fecha, manual){
   // Pasarse de los días estimados tiene coste: comprobarlo antes de guardar
   var extra = puedeTrabajarDiaExtra(p, fecha);
   if (!extra.ok){ toast(extra.motivo, 6500); return false; }
+  // ¿Esta sesión estrena un día nuevo en el proyecto? (para la extensión)
+  var esDiaNuevo = !estado.sesiones.some(function(s){
+    return s.proyectoId === proyectoId && s.fecha === fecha;
+  });
   // Guardamos si la sesión fue en un prioritario (para racha y banner)
   estado.sesiones.push({
     id: uid(), proyectoId: proyectoId, fecha: fecha,
@@ -974,18 +993,19 @@ function registrarSesion(proyectoId, horas, fecha, manual){
   });
 
   // ¿La barra acaba de llegar al 100% de los días estimados? Preguntar
-  // cuántos días más hacen falta para extender la estimación
+  // (una vez por día nuevo) cuántos días más hacen falta; la barra se
+  // recalcula con el total nuevo
   var est = diasEstimadosDe(p);
-  if (est && diasTrabajados(p) >= est){
+  if (est && esDiaNuevo && diasTrabajados(p) >= est){
     setTimeout(function(){
-      var r = window.prompt('«' + p.nombre + '» ha llegado al 100% de sus días estimados (' + est +
-        '). Si aún no está terminado, ¿cuántos días MÁS estimas que te llevará? (cancela si ya casi está)');
-      var extra = parseInt(r, 10);
-      if (r !== null && extra > 0){
-        p.diasEstimados = est + extra;
-        guardar(); render();
-        toast('Estimación extendida a ' + p.diasEstimados + ' días. La barra se recalcula.');
-      }
+      pedirDias('«' + p.nombre + '» al 100%',
+        'Has llegado al 100% de los ' + est + ' días estimados. Si aún no está terminado, indica cuántos días MÁS necesitas y la barra se recalculará con el total nuevo. (Cancela si ya casi está.)',
+        'Días adicionales', '',
+        function(extra){
+          p.diasEstimados = est + extra;
+          guardar(); render();
+          toast('Estimación ampliada a ' + p.diasEstimados + ' días. Barra recalculada.');
+        });
     }, 600);
   }
 
@@ -1030,6 +1050,18 @@ function cerrarConfirmar(){
   document.getElementById('velo-confirmar').classList.remove('visible');
   document.getElementById('conf-cancelar').style.display = '';   // por si vino de un aviso
   confirmarCallback = null;
+}
+
+// Modal propio para pedir un número de días (el prompt nativo del
+// navegador no funciona en las apps de pantalla de inicio de iOS)
+var diasCallback = null;
+function pedirDias(titulo, mensaje, etiqueta, valorInicial, alGuardar){
+  document.getElementById('dias-titulo').textContent = titulo;
+  document.getElementById('dias-msj').textContent = mensaje;
+  document.getElementById('dias-etiqueta').textContent = etiqueta;
+  document.getElementById('dias-valor').value = valorInicial || '';
+  diasCallback = alGuardar;
+  document.getElementById('velo-dias').classList.add('visible');
 }
 
 // Aviso simple de un solo botón (reutiliza el modal de confirmación)
@@ -1350,6 +1382,9 @@ function tarjetaProyecto(p){
     }
     if (p.estado === 'pausado'){
       h += '<button class="btn btn-azul btn-chico" data-accion="reactivar">' + ico('play') + ' Reactivar</button>';
+    }
+    if (estDias){
+      h += '<button class="btn btn-borde btn-chico" data-accion="ajustar-dias">' + ico('edit') + ' Días</button>';
     }
     h += '<button class="btn btn-borde btn-chico" data-accion="terminar">' + ico('flag') + ' Terminar</button>';
     h += '<button class="btn btn-borde btn-chico" data-accion="borrar-simple" style="color:var(--rojo)">' + ico('trash') + '</button>';
@@ -2299,6 +2334,20 @@ function conectarEventos(){
     var b = ev.target.closest('[data-borrar-ses]');
     if (b){ borrarSesion(b.dataset.borrarSes); }
   });
+  // Modal de días (extensiones y ajustes de estimación)
+  document.getElementById('dias-guardar').addEventListener('click', function(){
+    var d = parseInt(document.getElementById('dias-valor').value, 10);
+    if (!d || d < 1){ toast('Eso no es un número de días válido.'); return; }
+    var cb = diasCallback;
+    diasCallback = null;
+    document.getElementById('velo-dias').classList.remove('visible');
+    if (cb) cb(d);
+  });
+  document.getElementById('dias-cancelar').addEventListener('click', function(){
+    diasCallback = null;
+    document.getElementById('velo-dias').classList.remove('visible');
+  });
+
   document.getElementById('ses-guardar').addEventListener('click', guardarEdicionSesion);
   document.getElementById('ses-cancelar').addEventListener('click', function(){
     document.getElementById('velo-sesion').classList.remove('visible');
@@ -2345,13 +2394,28 @@ function conectarEventos(){
       }
       case 'estimar-dias': {
         // Migración amable: prioritarios creados antes de que existiera la estimación
-        var r = window.prompt('¿Cuántos días estimas que tardarás en terminar «' + p.nombre + '»?');
-        var d = parseInt(r, 10);
-        if (r === null) break;
-        if (!d || d < 1){ toast('Eso no es un número de días válido.'); break; }
-        p.diasEstimados = d;
-        guardar(); render();
-        toast('Estimación guardada: ' + d + ' días. El avance se llenará solo al trabajar.');
+        pedirDias('Duración estimada',
+          '¿Cuántos días estimas que tardarás en terminar «' + p.nombre + '»?',
+          'Días', '',
+          function(d){
+            p.diasEstimados = d;
+            guardar(); render();
+            toast('Estimación guardada: ' + d + ' días. El avance se llenará solo al trabajar.');
+          });
+        break;
+      }
+      case 'ajustar-dias': {
+        // Cambiar el TOTAL de días estimados; la barra se recalcula
+        var actual = diasEstimadosDe(p);
+        pedirDias('Ajustar duración de «' + p.nombre + '»',
+          'Estimación actual: ' + actual + ' días (llevas ' + diasTrabajados(p) +
+          ' trabajados). Indica el TOTAL nuevo de días y la barra se recalculará.',
+          'Días totales', actual,
+          function(d){
+            p.diasEstimados = d;
+            guardar(); render();
+            toast('Estimación ajustada a ' + d + ' días. Barra recalculada.');
+          });
         break;
       }
     }
