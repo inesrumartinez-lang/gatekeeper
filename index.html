@@ -511,7 +511,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v22 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v23 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -692,8 +692,16 @@ var NOMBRE_ESTADO = {
   pausado:'Pausado', terminado:'Terminado'
 };
 var NOMBRE_TIPO = { tesis:'Tesis', airesearch:'AI research', freelance:'Freelance', personal:'Personal', otro:'Otro' };
-// Colores del calendario: uno por proyecto, asignados por orden de creación
-var PALETA_CAL = ['#7fd8c3','#8fb8d8','#d9bd8d','#dd9791','#b5a3d8','#a3c9a0','#d8a3c2','#93c7cf'];
+// Colores por categoría: cada tipo tiene su familia (tesis en azules,
+// AI research en verdes…) y cada proyecto un tono distinto dentro de ella,
+// para reconocer de un vistazo a qué categoría pertenece
+var PALETAS_TIPO = {
+  tesis:      ['#8fb8d8', '#6f9fc9', '#b3d2e8', '#5b88b5'],   // azules
+  airesearch: ['#7fd8c3', '#5fc0a8', '#a8e6d5', '#49a68d'],   // verdes aguamarina
+  freelance:  ['#b5a3d8', '#9b85c7', '#cfc2e8', '#8571b3'],   // lavandas
+  personal:   ['#d9bd8d', '#c9a76b', '#e8d8b3', '#b39055'],   // arenas
+  otro:       ['#d8a3c2', '#c787ac', '#e8c4da', '#b56f95']    // rosas
+};
 var MESES_LARGOS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 // Tipos que pueden ser prioritarios (y en los que se paga peaje)
 var TIPOS_PRIORITARIOS = ['tesis', 'airesearch'];
@@ -761,12 +769,18 @@ function fmtFecha(clave){
 
 function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
-// Color estable de un proyecto para el calendario y las listas del historial
+// Color estable de un proyecto: la familia la decide su categoría y el
+// tono, su posición entre los proyectos de esa misma categoría
 function colorDeProyecto(id){
+  var p = proyecto(id);
+  if (!p) return 'var(--grisestado)';   // sesiones de proyectos ya borrados
+  var familia = PALETAS_TIPO[p.tipo] || PALETAS_TIPO.otro;
+  var indice = 0;
   for (var i = 0; i < estado.proyectos.length; i++){
-    if (estado.proyectos[i].id === id) return PALETA_CAL[i % PALETA_CAL.length];
+    if (estado.proyectos[i].id === id) break;
+    if (estado.proyectos[i].tipo === p.tipo) indice++;
   }
-  return 'var(--grisestado)';   // sesiones de proyectos ya borrados
+  return familia[indice % familia.length];
 }
 
 // Icono del sprite Feather para HTML generado dinámicamente
