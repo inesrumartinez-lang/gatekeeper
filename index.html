@@ -492,7 +492,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v19 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v20 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -574,8 +574,8 @@ nav button.on{color:var(--texto);background:var(--panel)}
         final será la <b>media de las dos</b>. El peaje será de 1h por día de esa media…
         salvo que la ruleta (1 de cada 10) salga con premio y lo deje sin peaje.
         El peaje se canjea con la <b>bolsa de horas</b> (1h de tesis llena 1h;
-        1h de AI research, 45 min) y cada canje la consume: el siguiente
-        desbloqueo exige volver a llenarla. Y ojo: si te pasas de los días
+        1h de AI research, 45 min) y cada canje la <b>vacía por completo</b>,
+        aunque sobren horas: el siguiente desbloqueo empieza de cero. Y ojo: si te pasas de los días
         estimados, cada día extra de trabajo costará 30 min más de prioritario.
       </p>
       <p class="nota nota-aviso" id="np-sin-ia" style="display:none;margin-bottom:12px">
@@ -1142,7 +1142,7 @@ function renderPanel(){
   // Bolsa de horas y peajes pendientes
   document.getElementById('bolsa-linea').innerHTML =
     'Bolsa disponible: <b style="color:var(--texto)">' + fmtHoras(bolsaDisponible()) + '</b>' +
-    ' · se llena con horas de prioritarios (1h tesis = 1h · 1h AI research = 45 min) y cada canje la consume.';
+    ' · se llena con horas de prioritarios (1h tesis = 1h · 1h AI research = 45 min) y cada canje la vacía POR COMPLETO, aunque sobren horas.';
   var bloqueados = porEstado('bloqueado');
   var lp = document.getElementById('lista-peajes');
   if (bloqueados.length === 0){
@@ -1157,7 +1157,7 @@ function renderPanel(){
         '<div class="barra ' + (pct >= 100 ? 'barra-verde' : 'barra-ambar') + '"><div style="width:' + pct + '%"></div></div>' +
         '<div class="peaje-det">' + (pct >= 100
             ? 'Peaje completado: desbloquéalo desde Proyectos'
-            : 'Canjear consumirá ' + fmtHoras(p.peaje.horas) + ' de la bolsa · ' + pct + '%') +
+            : 'Canjear vaciará TODA la bolsa · ' + pct + '%') +
         '</div></div>';
     });
     lp.innerHTML = html2;
@@ -1612,17 +1612,26 @@ function desbloquear(p){
     toast('Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes de desbloquear este.', 4500);
     return;
   }
-  p.estado = 'activo';
-  if (p.peaje && !p.peaje.premiado){
-    // Canjear consume la bolsa: el siguiente peaje exige volver a llenarla
-    estado.bolsaGastada = (estado.bolsaGastada || 0) + p.peaje.horas;
-    guardar(); render();
-    toast('«' + p.nombre + '» desbloqueado: el canje consume ' + fmtHoras(p.peaje.horas) +
-      ' de la bolsa (quedan ' + fmtHoras(bolsaDisponible()) + ').', 5000);
-  } else {
+  // Los premiados no consumen bolsa: se activan directamente
+  if (!p.peaje || p.peaje.premiado){
+    p.estado = 'activo';
     guardar(); render();
     toast('«' + p.nombre + '» desbloqueado y activo. A por él.');
+    return;
   }
+  // Canjear vacía TODA la bolsa (aunque sobren horas): el siguiente
+  // desbloqueo exige volver a llenarla desde cero. Se avisa antes.
+  var enBolsa = bolsaDisponible();
+  confirmar('Canjear «' + p.nombre + '»',
+    'Desbloquearlo vaciará TODA la bolsa de horas: tienes ' + fmtHoras(enBolsa) +
+    ' y se consumirán por completo (aunque sobren respecto al peaje de ' +
+    fmtHoras(p.peaje.horas) + ').\n\nEl siguiente desbloqueo empezará con la bolsa a cero.',
+    'Canjear y vaciar la bolsa', false, function(){
+      p.estado = 'activo';
+      estado.bolsaGastada = (estado.bolsaGastada || 0) + enBolsa;
+      guardar(); render();
+      toast('«' + p.nombre + '» desbloqueado: la bolsa queda a cero (' + fmtHoras(enBolsa) + ' consumidas).', 5000);
+    });
 }
 
 // Reactivar un proyecto pausado (respetando el límite de activos)
