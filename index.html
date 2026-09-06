@@ -411,7 +411,10 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
       <div class="crd" id="crd-crono">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg> Cronómetro</h2>
         <label class="campo" id="campo-crono-proy"><span class="et">Proyecto</span>
-          <select id="sel-crono"></select>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="punto-crono" style="width:14px;height:14px;border-radius:4px;flex:none;background:var(--borde)"></span>
+            <select id="sel-crono" style="flex:1"></select>
+          </div>
         </label>
         <div class="crono-tiempo" id="crono-tiempo">0:00:00</div>
         <div class="crono-proy" id="crono-etiqueta"></div>
@@ -421,7 +424,10 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
       <div class="crd">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg> Entrada manual</h2>
         <label class="campo"><span class="et">Proyecto</span>
-          <select id="sel-manual"></select>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="punto-manual" style="width:14px;height:14px;border-radius:4px;flex:none;background:var(--borde)"></span>
+            <select id="sel-manual" style="flex:1"></select>
+          </div>
         </label>
         <label class="campo"><span class="et">Horas</span>
           <input type="number" id="in-horas" min="0.25" max="24" step="0.25" placeholder="1.5" inputmode="decimal">
@@ -491,6 +497,12 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <button class="btn btn-azul" id="btn-importar"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Importar copia</button>
       </div>
       <div class="crd">
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg> Bolsa de horas</h2>
+        <p class="nota" style="margin-bottom:12px" id="aj-bolsa-info"></p>
+        <button class="btn btn-borde" id="btn-vaciar-bolsa" style="color:var(--rojo)">Vaciar la bolsa a cero</button>
+        <p class="nota" style="margin-top:10px">Para cuadrar cuentas (por ejemplo, si un canje antiguo no vació la bolsa). No se puede deshacer.</p>
+      </div>
+      <div class="crd">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Actualizaciones</h2>
         <button class="btn btn-azul" id="btn-actualizar">Buscar actualización</button>
         <p class="nota" style="margin-top:10px">Con conexión, la app se actualiza sola al abrirla. Este botón fuerza la comprobación por si acaso.</p>
@@ -499,7 +511,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v21 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v22 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -1123,8 +1135,8 @@ function renderPanel(){
   Object.keys(porProyecto).forEach(function(pid){
     var p = proyecto(pid);
     filas.push({
+      id: pid,
       nombre: p ? p.nombre : '(proyecto borrado)',
-      estado: p ? p.estado : 'terminado',
       horas: porProyecto[pid]
     });
   });
@@ -1137,11 +1149,13 @@ function renderPanel(){
     var max = filas[0].horas;
     var html = '<p class="nota" style="margin-bottom:10px">Total: <b style="color:var(--texto)">' + fmtHoras(totalSemana) + '</b> desde el lunes</p>';
     filas.forEach(function(f){
-      var color = f.estado === 'prioritario' ? 'barra-verde' : (f.estado === 'activo' ? 'barra-azul' : 'barra-gris');
+      // Cada proyecto con su color estable, el mismo del calendario
+      var color = colorDeProyecto(f.id);
       var ancho = Math.max(4, Math.round(f.horas / max * 100));
       html += '<div class="gsem-fila">' +
-        '<div class="gsem-cab"><b>' + esc(f.nombre) + '</b><span>' + fmtHoras(f.horas) + '</span></div>' +
-        '<div class="barra ' + color + '"><div style="width:' + ancho + '%"></div></div></div>';
+        '<div class="gsem-cab"><b><span class="pt" style="background:' + color + ';width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:6px"></span>' +
+        esc(f.nombre) + '</b><span>' + fmtHoras(f.horas) + '</span></div>' +
+        '<div class="barra"><div style="width:' + ancho + '%;background:' + color + '"></div></div></div>';
     });
     g.innerHTML = html;
   }
@@ -1191,6 +1205,10 @@ function renderPanel(){
   }).join('');
 
   renderExplorador();
+
+  // Línea informativa de la bolsa en Ajustes
+  var infoBolsa = document.getElementById('aj-bolsa-info');
+  if (infoBolsa) infoBolsa.textContent = 'Disponible ahora mismo: ' + fmtHoras(bolsaDisponible()) + '.';
 }
 
 /* ----- Explorador de métricas: filtros por proyecto, categoría y fechas ----- */
@@ -1310,7 +1328,8 @@ function renderProyectos(){
 
 // Genera el HTML de una tarjeta de proyecto según su estado
 function tarjetaProyecto(p){
-  var h = '<div class="proy proy-' + p.estado + '" data-id="' + p.id + '">';
+  var colorP = colorDeProyecto(p.id);
+  var h = '<div class="proy proy-' + p.estado + '" data-id="' + p.id + '" style="border-left-color:' + colorP + '">';
   h += '<div class="proy-cab"><div>' +
        '<div class="proy-nombre">' + esc(p.nombre) + '</div>' +
        '<div class="proy-tipo">' + NOMBRE_TIPO[p.tipo] + ' · creado el ' + fmtFecha(p.creadoEn.slice(0,10)) + '</div>' +
@@ -1363,7 +1382,6 @@ function tarjetaProyecto(p){
   } else {
     // prioritario / activo / pausado: avance y acciones
     var av = avanceDe(p);
-    var claseBarra = (p.estado === 'prioritario' ? 'barra-verde' : p.estado === 'activo' ? 'barra-azul' : 'barra-ambar');
     var estDias = diasEstimadosDe(p);
     // El aviso del coste del día extra solo aplica a los que pagan peaje
     if (p.peaje && p.peaje.diasUsuario && diasTrabajados(p) >= p.peaje.diasUsuario && p.estado !== 'pausado'){
@@ -1374,10 +1392,10 @@ function tarjetaProyecto(p){
       // Barra automática: se llena sola con los días trabajados, sin deslizador
       h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b> · ' +
            diasTrabajados(p) + ' de ' + estDias + ' días trabajados</div>' +
-           '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>';
+           '<div class="barra"><div style="width:' + av + '%;background:' + colorP + '"></div></div>';
     } else {
       h += '<div class="proy-avance">Avance: <b style="color:var(--texto)">' + av + '%</b></div>' +
-           '<div class="barra ' + claseBarra + '"><div style="width:' + av + '%"></div></div>' +
+           '<div class="barra"><div style="width:' + av + '%;background:' + colorP + '"></div></div>' +
            '<input type="range" min="0" max="100" step="5" value="' + (p.avance || 0) + '" data-accion="avance" aria-label="Avance">';
       if (p.estado === 'prioritario'){
         h += '<div class="proy-acciones" style="margin-top:6px"><button class="btn btn-borde btn-chico" data-accion="estimar-dias">Definir duración estimada</button></div>';
@@ -1536,7 +1554,7 @@ function renderHistorial(){
 function renderTiempo(){
   // Selectores de proyecto (solo prioritarios y activos)
   var opciones = proyectosRegistrables().map(function(p){
-    return '<option value="' + p.id + '">' + (p.estado === 'prioritario' ? '● ' : '○ ') + esc(p.nombre) + '</option>';
+    return '<option value="' + p.id + '">' + esc(p.nombre) + '</option>';
   }).join('');
   var vacias = '<option value="">— No hay proyectos donde registrar —</option>';
 
@@ -1548,6 +1566,7 @@ function renderTiempo(){
   // Conservar la selección previa si sigue existiendo
   if (valorCrono && proyecto(valorCrono)) selCrono.value = valorCrono;
   if (valorManual && proyecto(valorManual)) selManual.value = valorManual;
+  actualizarPuntosSelectores();
 
   // Fecha por defecto de la entrada manual: hoy (y nunca en el futuro)
   var inFecha = document.getElementById('in-fecha');
@@ -1575,13 +1594,23 @@ function renderTiempo(){
     var ult = deHoy.slice().reverse();
     lista.innerHTML = ult.map(function(s){
       var p = proyecto(s.proyectoId);
-      return '<div class="ses-fila"><b><span style="color:var(--' + (s.prioritario ? 'verde' : 'azul') + ')">●</span> ' +
+      return '<div class="ses-fila"><b><span class="pt" style="background:' + colorDeProyecto(s.proyectoId) + ';width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:6px"></span>' +
              esc(p ? p.nombre : '(borrado)') + '</b>' +
              '<span class="der">' + fmtHoras(s.horas) + ' · ' + fmtFecha(s.fecha) + '</span>' +
              '<button class="ses-btn" data-editar-ses="' + s.id + '" aria-label="Editar">' + ico('edit') + '</button>' +
              '<button class="ses-btn" data-borrar-ses="' + s.id + '" aria-label="Borrar" style="color:var(--rojo)">' + ico('trash') + '</button></div>';
     }).join('');
   }
+}
+
+// Puntos de color junto a los selectores: el color del proyecto elegido
+function actualizarPuntosSelectores(){
+  [['sel-crono', 'punto-crono'], ['sel-manual', 'punto-manual']].forEach(function(par){
+    var sel = document.getElementById(par[0]);
+    var punto = document.getElementById(par[1]);
+    punto.style.background = (sel.value && proyecto(sel.value))
+      ? colorDeProyecto(sel.value) : 'var(--borde)';
+  });
 }
 
 // Pinta el estado del cronómetro (en marcha o parado)
@@ -2355,6 +2384,8 @@ function conectarEventos(){
   // Cronómetro y entrada manual
   document.getElementById('btn-crono').addEventListener('click', alternarCrono);
   document.getElementById('btn-manual').addEventListener('click', guardarManual);
+  document.getElementById('sel-crono').addEventListener('change', actualizarPuntosSelectores);
+  document.getElementById('sel-manual').addEventListener('change', actualizarPuntosSelectores);
 
   // Editar y borrar registros de tiempo (delegación en la lista de sesiones)
   document.getElementById('lista-sesiones').addEventListener('click', function(ev){
@@ -2562,6 +2593,19 @@ function conectarEventos(){
         salida.textContent = resultado.dias !== null
           ? 'Correcto: la IA respondió (' + resultado.dias + ' días para el proyecto de prueba).'
           : 'Fallo: ' + resultado.error;
+      });
+  });
+
+  // Ajustes: vaciar la bolsa de horas a cero
+  document.getElementById('btn-vaciar-bolsa').addEventListener('click', function(){
+    var enBolsa = bolsaDisponible();
+    if (enBolsa <= 0){ toast('La bolsa ya está a cero.'); return; }
+    confirmar('Vaciar la bolsa',
+      'Tienes ' + fmtHoras(enBolsa) + ' acumuladas y quedarán a CERO. El siguiente desbloqueo exigirá volver a llenarla desde el principio.\n\nEsto no se puede deshacer.',
+      'Vaciar a cero', true, function(){
+        estado.bolsaGastada = (estado.bolsaGastada || 0) + enBolsa;
+        guardar(); render();
+        toast('Bolsa vaciada: ' + fmtHoras(enBolsa) + ' consumidas. A ganársela de nuevo.');
       });
   });
 
