@@ -184,6 +184,9 @@ nav button{
 }
 nav button .ni{width:22px;height:22px}
 nav button.on{color:var(--texto);background:var(--panel)}
+/* iOS descoloca los elementos fijos cuando el teclado está abierto:
+   se ocultan mientras se escribe y se recolocan al cerrar el teclado */
+body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
 
 /* ---------- Vistas (pestañas) ---------- */
 .vista{display:none}
@@ -401,6 +404,10 @@ nav button.on{color:var(--texto);background:var(--panel)}
     <!-- ============ VISTA: TIEMPO (pantalla principal) ============ -->
     <section class="vista visible" id="vista-tiempo">
       <div id="zona-banner"></div>
+      <button class="crd" id="crd-bolsa" style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;font-family:inherit;color:var(--texto);font-size:15px;text-align:left">
+        <span style="color:var(--gris);font-weight:700"><svg class="ico" aria-hidden="true"><use href="#i-lock"/></svg> Bolsa de horas</span>
+        <span><b id="bolsa-valor" style="font-size:18px">0m</b> <span class="nota" id="bolsa-siguiente"></span></span>
+      </button>
       <div class="crd" id="crd-crono">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg> Cronómetro</h2>
         <label class="campo" id="campo-crono-proy"><span class="et">Proyecto</span>
@@ -492,7 +499,7 @@ nav button.on{color:var(--texto);background:var(--panel)}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v20 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v21 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -1549,6 +1556,16 @@ function renderTiempo(){
 
   renderCrono();
 
+  // Contador de bolsa de la pantalla principal (tocar lleva a Métricas)
+  document.getElementById('bolsa-valor').textContent = fmtHoras(bolsaDisponible());
+  var bloqueadosBolsa = porEstado('bloqueado').filter(function(b){ return !b.peaje.premiado; });
+  var siguiente = null;
+  bloqueadosBolsa.forEach(function(b){
+    if (siguiente === null || b.peaje.horas < siguiente) siguiente = b.peaje.horas;
+  });
+  document.getElementById('bolsa-siguiente').textContent =
+    siguiente !== null ? '· peaje más barato: ' + fmtHoras(siguiente) : '';
+
   // Sesiones registradas HOY (editables por si hay errores)
   var lista = document.getElementById('lista-sesiones');
   var deHoy = estado.sesiones.filter(function(s){ return s.fecha === hoy(); });
@@ -2317,6 +2334,9 @@ function conectarEventos(){
   // FAB nuevo proyecto
   document.getElementById('fab-nuevo').addEventListener('click', abrirNuevoProyecto);
 
+  // El contador de bolsa lleva a Métricas, donde está el detalle
+  document.getElementById('crd-bolsa').addEventListener('click', function(){ irA('panel'); });
+
   // Modal nuevo proyecto
   document.getElementById('np-cancelar').addEventListener('click', cerrarNuevoProyecto);
   document.getElementById('np-crear').addEventListener('click', intentarCrearProyecto);
@@ -2586,6 +2606,25 @@ function conectarEventos(){
   // Al volver a la app (cambio de pestaña/app en iOS), refrescar el cronómetro
   document.addEventListener('visibilitychange', function(){
     if (!document.hidden){ renderCrono(); renderBanner(); }
+  });
+
+  // El teclado de iOS deja la barra de navegación fija flotando a mitad de
+  // pantalla: ocultarla mientras haya un campo enfocado y, al salir,
+  // forzar un pequeño scroll para que el navegador la recoloque abajo
+  var CAMPOS = 'input, textarea, select';
+  document.addEventListener('focusin', function(ev){
+    if (ev.target.matches && ev.target.matches(CAMPOS)){
+      document.body.classList.add('teclado-abierto');
+    }
+  });
+  document.addEventListener('focusout', function(){
+    setTimeout(function(){
+      var a = document.activeElement;
+      if (!a || !(a.matches && a.matches(CAMPOS))){
+        document.body.classList.remove('teclado-abierto');
+        window.scrollTo(window.scrollX, window.scrollY);   // recolocar los fijos
+      }
+    }, 150);
   });
 }
 
