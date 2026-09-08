@@ -511,7 +511,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v23 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v24 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -606,6 +606,16 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
       <button class="btn btn-borde" id="np-cancelar">Cancelar</button>
       <button class="btn btn-verde" id="np-crear">Crear</button>
     </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: PUNTUAR UN PROYECTO TERMINADO ============ -->
+<div class="velo" id="velo-valorar">
+  <div class="hoja">
+    <h3 id="val-titulo"></h3>
+    <div class="msj">¿Cómo de útil o productivo ha sido? Puntúalo del 1 al 5.</div>
+    <div id="val-estrellas" style="display:flex;justify-content:center;gap:4px;margin:6px 0 18px"></div>
+    <button class="btn btn-borde" id="val-saltar">Ahora no</button>
   </div>
 </div>
 
@@ -1085,6 +1095,46 @@ function cerrarConfirmar(){
   confirmarCallback = null;
 }
 
+// Valoración de proyectos terminados (1-5 estrellas)
+var valorarProyectoId = null;
+var valorarCallback = null;
+
+function pintarEstrellasModal(valor){
+  var cont = document.getElementById('val-estrellas');
+  var html = '';
+  for (var n = 1; n <= 5; n++){
+    html += '<button data-val="' + n + '" style="background:none;border:none;cursor:pointer;font-size:38px;line-height:1;padding:4px;color:' +
+      (n <= valor ? 'var(--ambar)' : 'var(--borde)') + '">★</button>';
+  }
+  cont.innerHTML = html;
+}
+
+function abrirValoracion(p, alCerrar){
+  valorarProyectoId = p.id;
+  valorarCallback = alCerrar || null;
+  document.getElementById('val-titulo').textContent = 'Puntúa «' + p.nombre + '»';
+  pintarEstrellasModal(p.valoracion || 0);
+  document.getElementById('velo-valorar').classList.add('visible');
+}
+
+function cerrarValoracion(){
+  document.getElementById('velo-valorar').classList.remove('visible');
+  var cb = valorarCallback;
+  valorarProyectoId = null;
+  valorarCallback = null;
+  if (cb) cb();
+}
+
+// HTML de las estrellas de una ficha (relleno según la nota)
+function estrellasDe(valor){
+  var llenas = '', vacias = '';
+  for (var n = 1; n <= 5; n++){
+    if (n <= valor) llenas += '★'; else vacias += '★';
+  }
+  return '<span style="color:var(--ambar);letter-spacing:2px">' + llenas +
+         '</span><span style="color:var(--borde);letter-spacing:2px">' + vacias + '</span>';
+}
+
 // Modal propio para pedir un número de días (el prompt nativo del
 // navegador no funciona en las apps de pantalla de inicio de iOS)
 var diasCallback = null;
@@ -1207,8 +1257,13 @@ function renderPanel(){
     if (s.fecha.indexOf(prefijoMes) === 0) totalMesActual += s.horas;
     if (s.fecha >= corte7 && s.fecha <= hoy()) hace7 += s.horas;
   });
+  var valorados = porEstado('terminado').filter(function(p){ return p.valoracion; });
+  var mediaVal = valorados.length
+    ? (Math.round(valorados.reduce(function(a, p){ return a + p.valoracion; }, 0) / valorados.length * 10) / 10) + ' ★'
+    : '—';
   var filasMet = [
     ['Horas este mes', fmtHoras(totalMesActual)],
+    ['Puntuación media (terminados)', mediaVal],
     ['Media diaria (últimos 7 días)', fmtHoras(Math.round(hace7 / 7 * 100) / 100)],
     ['Proyectos terminados', String(porEstado('terminado').length)],
     ['Proyectos abandonados', String((estado.eliminados || []).length)],
@@ -1389,7 +1444,10 @@ function tarjetaProyecto(p){
            ' al ' + fmtFecha(p.terminadoEn.slice(0,10)) +
            ' (' + (diasEntre(p.creadoEn.slice(0,10), p.terminadoEn.slice(0,10)) + 1) + ' días de calendario)</div>';
     }
+    h += '<div class="proy-avance">Puntuación: ' +
+         (p.valoracion ? '<span style="font-size:16px">' + estrellasDe(p.valoracion) + '</span>' : 'sin puntuar') + '</div>';
     h += '<div class="proy-acciones">' +
+         '<button class="btn btn-borde btn-chico" data-accion="valorar">★ Puntuar</button>' +
          '<button class="btn btn-azul btn-chico" data-accion="reabrir">' + ico('play') + ' Reabrir</button>' +
          '<button class="btn btn-borde btn-chico" data-accion="borrar-simple">' + ico('trash') + ' Borrar</button></div>';
 
@@ -1726,10 +1784,14 @@ function terminar(p){
     p.terminadoEn = new Date().toISOString();
     guardar(); render();
     toast('«' + p.nombre + '» terminado. Uno menos.');
-    // Premio por terminar un prioritario: condonar el peaje de un bloqueado
-    if (eraPrioritario && porEstado('bloqueado').length > 0){
-      setTimeout(ofrecerPremio, 350);
-    }
+    // Primero la valoración (opcional) y, al cerrar, el premio si tocaba
+    setTimeout(function(){
+      abrirValoracion(p, function(){
+        if (eraPrioritario && porEstado('bloqueado').length > 0){
+          setTimeout(ofrecerPremio, 300);
+        }
+      });
+    }, 350);
   });
 }
 
@@ -2422,6 +2484,20 @@ function conectarEventos(){
     document.getElementById('velo-dias').classList.remove('visible');
   });
 
+  // Modal de valoración: elegir estrellas o saltar
+  document.getElementById('val-estrellas').addEventListener('click', function(ev){
+    var btn = ev.target.closest('[data-val]');
+    if (!btn) return;
+    var p = proyecto(valorarProyectoId);
+    if (p){
+      p.valoracion = parseInt(btn.dataset.val, 10);
+      guardar(); render();
+      toast('«' + p.nombre + '»: ' + p.valoracion + ' de 5.');
+    }
+    cerrarValoracion();
+  });
+  document.getElementById('val-saltar').addEventListener('click', cerrarValoracion);
+
   document.getElementById('ses-guardar').addEventListener('click', guardarEdicionSesion);
   document.getElementById('ses-cancelar').addEventListener('click', function(){
     document.getElementById('velo-sesion').classList.remove('visible');
@@ -2446,6 +2522,9 @@ function conectarEventos(){
       case 'terminar':         terminar(p); break;
       case 'borrar-bloqueado': borrarBloqueado(p); break;
       case 'borrar-simple':    borrarSimple(p); break;
+      case 'valorar':
+        abrirValoracion(p);
+        break;
       case 'reabrir': {
         // Reabrir un terminado: vuelve como prioritario si su tipo lo permite,
         // como activo si hay hueco, o pausado si no lo hay

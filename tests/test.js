@@ -1,0 +1,171 @@
+// Batería de pruebas funcionales de Gatekeeper (Playwright + Chromium).
+//
+// Uso:  npm install playwright   (una vez, donde sea)
+//       node tests/test.js       (desde la raíz del repositorio)
+// Si Chromium no está en el PATH de Playwright, exporta CHROMIUM_PATH
+// con la ruta del ejecutable.
+const { chromium } = require('playwright');
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const RAIZ = path.join(__dirname, '..');
+const PUERTO = 8931;
+
+const servidor = http.createServer((req, res) => {
+  let f = req.url.split('?')[0];
+  if (f === '/') f = '/index.html';
+  const ruta = path.join(RAIZ, f);
+  if (!fs.existsSync(ruta)) { res.writeHead(404); res.end(); return; }
+  const tipos = { '.html':'text/html', '.js':'text/javascript', '.json':'application/json', '.png':'image/png' };
+  res.writeHead(200, {'Content-Type': tipos[path.extname(ruta)] || 'application/octet-stream'});
+  res.end(fs.readFileSync(ruta));
+});
+
+let fallos = 0;
+function comprobar(nombre, cond){
+  console.log((cond ? '✅' : '❌') + ' ' + nombre);
+  if (!cond) fallos++;
+}
+
+(async () => {
+  await new Promise(r => servidor.listen(PUERTO, r));
+  const opciones = {};
+  if (process.env.CHROMIUM_PATH) opciones.executablePath = process.env.CHROMIUM_PATH;
+  const navegador = await chromium.launch(opciones);
+  const pag = await (await navegador.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+
+  const erroresJS = [];
+  pag.on('pageerror', e => erroresJS.push(e.message));
+
+  // La ruleta gira ~2s tras confirmar la creación de un bloqueado
+  async function pasarRuleta(){
+    await pag.waitForSelector('#velo-ruleta.visible', { timeout: 5000 });
+    await pag.waitForSelector('#ruleta-continuar', { state: 'visible', timeout: 8000 });
+    const texto = await pag.locator('#ruleta-msj').textContent();
+    await pag.click('#ruleta-continuar');
+    await pag.waitForTimeout(200);
+    return texto;
+  }
+
+  await pag.goto(`http://localhost:${PUERTO}/`);
+  await pag.waitForTimeout(600);
+
+  comprobar('La página carga con su título', await pag.locator('h1').first().textContent() === 'Gatekeeper.');
+  comprobar('La pantalla principal es el registro de tiempo', await pag.locator('#vista-tiempo').isVisible());
+
+  // --- Crear el primer prioritario (tesis, azul, sin deslizador) ---
+  await pag.click('nav button[data-vista="proyectos"]');
+  await pag.click('#fab-nuevo');
+  comprobar('Primer proyecto: tipo autoseleccionado a tesis', (await pag.inputValue('#np-tipo')) === 'tesis');
+  await pag.fill('#np-nombre', 'Tesis doctoral');
+  await pag.fill('#np-dias', '10');
+  await pag.click('#np-crear');
+  await pag.waitForSelector('#velo-confirmar.visible');
+  await pag.click('#conf-ok');
+  await pag.waitForTimeout(200);
+  comprobar('Prioritario creado', (await pag.locator('.proy-prioritario').count()) === 1);
+  const estiloPrio = await pag.getAttribute('.proy-prioritario', 'style');
+  comprobar('Los proyectos de tesis van en azules', /#8fb8d8/.test(estiloPrio || ''));
+  comprobar('Sin deslizador: la barra se llena con los días trabajados', (await pag.locator('.proy-prioritario input[type=range]').count()) === 0);
+
+  // --- Crear un bloqueado (personal) pasando por la ruleta sin premio ---
+  await pag.click('#fab-nuevo');
+  comprobar('Tipo personal no puede ser prioritario', !(await pag.locator('#np-campo-prio').isVisible()));
+  await pag.fill('#np-nombre', 'Curso de piano');
+  await pag.fill('#np-dias', '2');
+  await pag.click('#np-crear');
+  await pag.waitForSelector('#velo-confirmar.visible');
+  comprobar('Peaje de 1h por día estimado', /peaje de 2h/.test(await pag.locator('#conf-msj').textContent()));
+  await pag.evaluate(() => { Math.random = () => 0.99; });   // sin premio
+  await pag.click('#conf-ok');
+  const msjRuleta = await pasarRuleta();
+  comprobar('La ruleta sin premio anuncia el peaje', /Peaje de 2h/.test(msjRuleta));
+  comprobar('El proyecto nace bloqueado', (await pag.locator('.proy-bloqueado').count()) === 1);
+
+  // --- Bolsa de horas: llenar, ver el contador y canjear (vaciado total) ---
+  await pag.click('nav button[data-vista="tiempo"]');
+  await pag.fill('#in-horas', '1');
+  await pag.click('#btn-manual');
+  await pag.waitForTimeout(300);
+  comprobar('La sesión de hoy aparece en la lista', (await pag.locator('#lista-sesiones .ses-fila').count()) === 1);
+  comprobar('El contador de bolsa marca 1h', (await pag.locator('#bolsa-valor').textContent()) === '1h');
+  await pag.fill('#in-horas', '2');
+  await pag.click('#btn-manual');
+  await pag.waitForTimeout(300);
+  await pag.click('nav button[data-vista="panel"]');
+  comprobar('Métricas muestra la bolsa y los peajes', /Bolsa disponible/.test(await pag.locator('#bolsa-linea').textContent()));
+  comprobar('La puntuación media aparece vacía al principio', /—/.test(await pag.locator('#metricas-extra').textContent()));
+  await pag.click('nav button[data-vista="proyectos"]');
+  comprobar('Con la bolsa llena aparece Desbloquear', (await pag.locator('[data-accion="desbloquear"]').count()) === 1);
+  await pag.click('[data-accion="desbloquear"]');
+  await pag.waitForSelector('#velo-confirmar.visible');
+  comprobar('El canje avisa de que vaciará TODA la bolsa', /vaciará TODA la bolsa/.test(await pag.locator('#conf-msj').textContent()));
+  await pag.click('#conf-ok');
+  await pag.waitForTimeout(300);
+  comprobar('El proyecto pasa a activo', (await pag.locator('.proy-activo').count()) === 1);
+  const gastada = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')).bolsaGastada);
+  comprobar('El canje vació la bolsa entera (3h de 3h)', gastada === 3);
+
+  // --- Terminar un proyecto pide la puntuación (1-5 estrellas) ---
+  await pag.locator('.proy-activo [data-accion="terminar"]').click();
+  await pag.waitForSelector('#velo-confirmar.visible');
+  await pag.click('#conf-ok');
+  await pag.waitForSelector('#velo-valorar.visible', { timeout: 5000 });
+  comprobar('Al terminar aparece el modal de puntuación', /Puntúa «Curso de piano»/.test(await pag.locator('#val-titulo').textContent()));
+  comprobar('Hay cinco estrellas para elegir', (await pag.locator('#val-estrellas [data-val]').count()) === 5);
+  await pag.locator('#val-estrellas [data-val="4"]').click();
+  await pag.waitForTimeout(300);
+  const valorado = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')).proyectos.find(p => p.nombre === 'Curso de piano').valoracion);
+  comprobar('La puntuación elegida se guarda (4 de 5)', valorado === 4);
+
+  // --- La ficha del historial muestra la nota y permite cambiarla ---
+  await pag.click('nav button[data-vista="historial"]');
+  const ficha = await pag.locator('#hist-terminados').textContent();
+  comprobar('La ficha muestra la puntuación', /Puntuación/.test(ficha) && /★/.test(ficha));
+  await pag.locator('#hist-terminados [data-accion="valorar"]').click();
+  await pag.waitForSelector('#velo-valorar.visible');
+  await pag.locator('#val-estrellas [data-val="5"]').click();
+  await pag.waitForTimeout(300);
+  await pag.click('nav button[data-vista="panel"]');
+  comprobar('La media de Métricas refleja la nota (5 ★)', /5 ★/.test(await pag.locator('#metricas-extra').textContent()));
+
+  // --- El último prioritario no se puede terminar si quedan bloqueados ---
+  await pag.click('nav button[data-vista="proyectos"]');
+  await pag.click('#fab-nuevo');
+  await pag.fill('#np-nombre', 'Otro en cola');
+  await pag.fill('#np-dias', '3');
+  await pag.click('#np-crear');
+  await pag.waitForSelector('#velo-confirmar.visible');
+  await pag.click('#conf-ok');
+  await pasarRuleta();
+  await pag.locator('.proy-prioritario [data-accion="terminar"]').click();
+  await pag.waitForTimeout(300);
+  comprobar('Guardia del último prioritario con bloqueados', /único prioritario/.test(await pag.locator('#toast').textContent()));
+
+  // --- "Ahora no" en la valoración deja el proyecto sin puntuar ---
+  await pag.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('gatekeeper_v1'));
+    d.proyectos.push({ id: 'aux', nombre: 'Auxiliar', tipo: 'otro', estado: 'activo', avance: 0, creadoEn: new Date().toISOString(), peaje: null });
+    localStorage.setItem('gatekeeper_v1', JSON.stringify(d));
+  });
+  await pag.reload();
+  await pag.waitForTimeout(400);
+  await pag.click('nav button[data-vista="proyectos"]');
+  await pag.locator('.proy[data-id="aux"] [data-accion="terminar"]').click();
+  await pag.waitForSelector('#velo-confirmar.visible');
+  await pag.click('#conf-ok');
+  await pag.waitForSelector('#velo-valorar.visible');
+  await pag.click('#val-saltar');
+  await pag.waitForTimeout(300);
+  await pag.click('nav button[data-vista="historial"]');
+  comprobar('Saltar la puntuación deja la ficha "sin puntuar"', /sin puntuar/.test(await pag.locator('#hist-terminados').textContent()));
+
+  comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
+  if (erroresJS.length) console.log('Errores:', erroresJS);
+
+  await navegador.close();
+  servidor.close();
+  console.log(fallos === 0 ? '\n🎉 TODO OK' : `\n💥 ${fallos} fallos`);
+  process.exit(fallos === 0 ? 0 : 1);
+})().catch(e => { console.error('ERROR FATAL:', e); process.exit(1); });
