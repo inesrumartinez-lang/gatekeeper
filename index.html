@@ -490,10 +490,17 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
       <div class="crd">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-save"/></svg> Copia de seguridad</h2>
         <p class="nota" style="margin-bottom:12px">Todos tus datos viven solo en este dispositivo. Haz copias de vez en cuando.</p>
+        <button class="btn btn-verde" id="btn-compartir" style="margin-bottom:10px"><svg class="ico" aria-hidden="true"><use href="#i-upload"/></svg> Compartir copia (Mail, Archivos…)</button>
         <button class="btn btn-azul" id="btn-exportar" style="margin-bottom:10px"><svg class="ico" aria-hidden="true"><use href="#i-upload"/></svg> Exportar copia (JSON)</button>
         <label class="campo"><span class="et">Importar: pega aquí el JSON de una copia</span>
           <textarea id="txt-importar" rows="3" placeholder='{"proyectos":[...]}'></textarea>
         </label>
+        <hr class="sep">
+        <label class="campo"><span class="et">Webhook de copia automática (opcional)</span>
+          <input type="text" id="aj-webhook" placeholder="https://hook.eu2.make.com/…" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <span class="nota">Si lo configuras, al abrir la app se enviará una copia semanal a ese webhook (sin tu clave API) — por ejemplo, un escenario de Make que te la reenvía por email.</span>
+        </label>
+        <button class="btn btn-azul" id="btn-guardar-webhook" style="margin-bottom:14px">Guardar webhook</button>
         <button class="btn btn-azul" id="btn-importar"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg> Importar copia</button>
       </div>
       <div class="crd">
@@ -511,7 +518,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v27 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v28 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -818,6 +825,9 @@ function normalizarConfig(datos){
   if (!datos.config.orModelo) datos.config.orModelo = MODELO_DEFECTO;
   if (typeof datos.config.orClave !== 'string') datos.config.orClave = '';
   if (typeof datos.bolsaGastada !== 'number') datos.bolsaGastada = 0;
+  if (!('ultimaCopia' in datos)) datos.ultimaCopia = null;
+  if (!('ultimaCopiaAuto' in datos)) datos.ultimaCopiaAuto = null;
+  if (typeof datos.config.webhookCopias !== 'string') datos.config.webhookCopias = '';
   if (!Array.isArray(datos.eliminados)) datos.eliminados = [];
   // (antes se llamaba emergenciaUsada; se migra el valor si existía)
   if (typeof datos.viaLibreUsada !== 'boolean'){
@@ -1180,14 +1190,28 @@ function render(){
 /* ----- Banner rojo persistente ----- */
 function renderBanner(){
   var zona = document.getElementById('zona-banner');
+  var html = '';
   var dias = diasSinPrioritario();
   if (dias !== null && dias > DIAS_AVISO){
-    zona.innerHTML =
-      '<div class="banner-rojo">' + ico('alert') + '<span>Llevas <b>' + dias +
+    html += '<div class="banner-rojo">' + ico('alert') + '<span>Llevas <b>' + dias +
       ' días</b> sin registrar horas en un proyecto prioritario. Los peajes no se pagan solos.</span></div>';
-  } else {
-    zona.innerHTML = '';
   }
+  // Recordatorio de copia de seguridad: con datos que perder y 7+ días
+  // sin copia (o ninguna nunca), un toque abre la hoja de compartir
+  if (estado.sesiones.length > 0){
+    var diasCopia = estado.ultimaCopia ? diasEntre(estado.ultimaCopia.slice(0, 10), hoy()) : null;
+    if (diasCopia === null || diasCopia >= 7){
+      html += '<button class="banner-rojo" id="banner-copia" style="width:100%;font-family:inherit;cursor:pointer;' +
+        'background:linear-gradient(135deg,#3a3222,#4a3f26);border-color:var(--ambar);color:#efe3c8">' +
+        ico('save') + '<span>' + (diasCopia === null
+          ? 'Nunca has hecho copia de seguridad y tus datos solo viven en este móvil.'
+          : 'Hace <b>' + diasCopia + ' días</b> de tu última copia de seguridad.') +
+        ' <b>Toca para hacerla ahora.</b></span></button>';
+    }
+  }
+  zona.innerHTML = html;
+  var btnCopia = document.getElementById('banner-copia');
+  if (btnCopia) btnCopia.addEventListener('click', compartirCopia);
 }
 
 /* ----- Panel (dashboard) ----- */
@@ -2402,7 +2426,27 @@ function borrarSesion(id){
 
 /* ================= EXPORTAR / IMPORTAR ================= */
 
+// Compartir la copia por la hoja de iOS (Mail, Archivos/iCloud, WhatsApp…)
+function compartirCopia(){
+  var texto = JSON.stringify(estado, null, 2);
+  var archivo = null;
+  try {
+    archivo = new File([texto], 'gatekeeper-copia-' + hoy() + '.json', { type: 'application/json' });
+  } catch(e){}
+  if (archivo && navigator.canShare && navigator.canShare({ files: [archivo] })){
+    navigator.share({ files: [archivo], title: 'Copia de Gatekeeper' }).then(function(){
+      estado.ultimaCopia = new Date().toISOString();
+      guardar(); renderBanner();
+      toast('Copia compartida. Guardada en un sitio seguro, espero.');
+    }).catch(function(){ /* canceló la hoja de compartir */ });
+  } else {
+    exportarJSON();   // navegadores sin Web Share: descarga clásica
+  }
+}
+
 function exportarJSON(){
+  estado.ultimaCopia = new Date().toISOString();
+  guardar(); renderBanner();
   var texto = JSON.stringify(estado, null, 2);
   var blob = new Blob([texto], {type:'application/json'});
   var url = URL.createObjectURL(blob);
@@ -2439,6 +2483,32 @@ function importarJSON(texto){
   if (inClave) inClave.value = estado.config.orClave;
   if (inModelo) inModelo.value = estado.config.orModelo;
   return true;
+}
+
+// Copia automática: si hay un webhook configurado y hace 7 días o más de
+// la última copia automática, se envía una al abrir la app. La clave de
+// OpenRouter NO viaja en estas copias. (Una web sin servidor no puede
+// actuar con la app cerrada: esto se dispara al abrirla.)
+function copiaAutomatica(){
+  var url = (estado.config.webhookCopias || '').trim();
+  var valida = url.indexOf('https://') === 0 || url.indexOf('http://localhost') === 0;
+  if (!valida) return;
+  var ultima = estado.ultimaCopiaAuto ? estado.ultimaCopiaAuto.slice(0, 10) : null;
+  if (ultima && diasEntre(ultima, hoy()) < 7) return;
+
+  var datos = JSON.parse(JSON.stringify(estado));
+  datos.config.orClave = '';   // la clave API no sale del dispositivo
+  // text/plain y no-cors: petición simple que los webhooks aceptan sin
+  // preflight; la respuesta es opaca, así que el envío se da por bueno
+  fetch(url, { method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(datos) })
+  .then(function(){
+    estado.ultimaCopiaAuto = new Date().toISOString();
+    estado.ultimaCopia = new Date().toISOString();
+    guardar(); renderBanner();
+    toast('Copia de seguridad semanal enviada al webhook.');
+  }).catch(function(){ /* sin red: se reintentará en la próxima apertura */ });
 }
 
 /* ================= NAVEGACIÓN ================= */
@@ -2808,6 +2878,14 @@ function conectarEventos(){
   });
 
   // Ajustes: copia de seguridad
+  document.getElementById('btn-compartir').addEventListener('click', compartirCopia);
+  document.getElementById('aj-webhook').value = estado.config.webhookCopias || '';
+  document.getElementById('btn-guardar-webhook').addEventListener('click', function(){
+    estado.config.webhookCopias = document.getElementById('aj-webhook').value.trim();
+    guardar();
+    toast(estado.config.webhookCopias ? 'Webhook guardado: copia semanal al abrir la app.' : 'Webhook eliminado.');
+    copiaAutomatica();
+  });
   document.getElementById('btn-exportar').addEventListener('click', exportarJSON);
   document.getElementById('btn-importar').addEventListener('click', function(){
     var texto = document.getElementById('txt-importar').value.trim();
@@ -2869,6 +2947,7 @@ if (errorCarga){
   conectarEventos();
   render();
   irA('tiempo');
+  copiaAutomatica();
 }
 
 // Registrar el service worker para que la app funcione sin conexión.

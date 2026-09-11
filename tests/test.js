@@ -12,7 +12,14 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const PUERTO = 8931;
 
+let webhookRecibido = null;   // último cuerpo recibido en /hook
 const servidor = http.createServer((req, res) => {
+  if (req.method === 'POST' && req.url === '/hook'){
+    let cuerpo = '';
+    req.on('data', c => cuerpo += c);
+    req.on('end', () => { webhookRecibido = cuerpo; res.writeHead(200); res.end('ok'); });
+    return;
+  }
   let f = req.url.split('?')[0];
   if (f === '/') f = '/index.html';
   const ruta = path.join(RAIZ, f);
@@ -270,6 +277,29 @@ function comprobar(nombre, cond){
   const metricasSesgo = await pag.locator('#metricas-extra').textContent();
   comprobar('Tu sesgo: estimas un 50% de menos', /estimas un 50% de menos/.test(metricasSesgo));
   comprobar('El sesgo de la IA: estima un 100% de más', /estima un 100% de más/.test(metricasSesgo));
+
+  // --- Protección de datos: recordatorio de copia y webhook semanal ---
+  await pag.click('nav button[data-vista="tiempo"]');
+  comprobar('Sin copia nunca hecha, aparece el recordatorio', await pag.locator('#banner-copia').isVisible());
+  await pag.click('#banner-copia');   // sin Web Share en headless cae a la descarga
+  await pag.waitForTimeout(400);
+  comprobar('Hacer la copia apaga el recordatorio', (await pag.locator('#banner-copia').count()) === 0);
+  const ultimaCopia = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')).ultimaCopia);
+  comprobar('Queda registrada la fecha de la copia', typeof ultimaCopia === 'string');
+  // Configurar el webhook local y comprobar el envío automático
+  await pag.click('nav button[data-vista="ajustes"]');
+  await pag.fill('#aj-webhook', 'http://localhost:' + PUERTO + '/hook');
+  await pag.click('#btn-guardar-webhook');
+  await pag.waitForTimeout(600);
+  comprobar('La copia automática llega al webhook', webhookRecibido !== null && /"proyectos"/.test(webhookRecibido));
+  comprobar('La clave de OpenRouter no viaja en la copia automática', webhookRecibido !== null && JSON.parse(webhookRecibido).config.orClave === '');
+  const copiaAuto = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')).ultimaCopiaAuto);
+  comprobar('Queda registrado el envío automático', typeof copiaAuto === 'string');
+  // En la próxima apertura, antes de 7 días, no se reenvía
+  webhookRecibido = null;
+  await pag.reload();
+  await pag.waitForTimeout(800);
+  comprobar('Antes de 7 días no se reenvía otra copia', webhookRecibido === null);
 
   comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
   if (erroresJS.length) console.log('Errores:', erroresJS);
