@@ -161,6 +161,49 @@ function comprobar(nombre, cond){
   await pag.click('nav button[data-vista="historial"]');
   comprobar('Saltar la puntuación deja la ficha "sin puntuar"', /sin puntuar/.test(await pag.locator('#hist-terminados').textContent()));
 
+  // --- Pausar un prioritario (en manos de otra persona) ---
+  await pag.click('nav button[data-vista="proyectos"]');
+  comprobar('Los prioritarios también tienen botón Pausar', (await pag.locator('.proy-prioritario [data-accion="pausar"]').count()) === 1);
+  await pag.locator('.proy-prioritario [data-accion="pausar"]').click();
+  await pag.waitForTimeout(300);
+  comprobar('El prioritario pausado queda inactivo', (await pag.locator('.proy-prioritario').count()) === 0 && (await pag.locator('.proy-pausado').count()) === 1);
+
+  // --- Sin prioritarios en marcha: desbloqueo de emergencia ---
+  comprobar('El bloqueado ofrece desbloqueo de emergencia', (await pag.locator('[data-accion="desbloquear-emergencia"]').count()) === 1);
+  await pag.locator('[data-accion="desbloquear-emergencia"]').click();
+  await pag.waitForSelector('#velo-confirmar.visible');
+  comprobar('La emergencia se explica antes de canjear', /sin peaje/.test(await pag.locator('#conf-msj').textContent()));
+  await pag.click('#conf-ok');
+  await pag.waitForTimeout(300);
+  const trasEmergencia = await pag.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('gatekeeper_v1'));
+    return { estado: d.proyectos.find(p => p.nombre === 'Otro en cola').estado,
+             gastada: d.bolsaGastada, usada: d.emergenciaUsada };
+  });
+  comprobar('El proyecto se activa sin gastar bolsa', trasEmergencia.estado === 'activo' && trasEmergencia.gastada === 3);
+  comprobar('La emergencia queda consumida', trasEmergencia.usada === true);
+
+  // --- Solo hay UNA emergencia: otro bloqueado no la ofrece ---
+  await pag.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('gatekeeper_v1'));
+    d.proyectos.push({ id: 'blq2', nombre: 'Segundo en cola', tipo: 'otro', estado: 'bloqueado', avance: 0,
+      creadoEn: new Date().toISOString(),
+      peaje: { horas: 5, horasBase: 5, dias: 5, diasUsuario: 5, suerte: false } });
+    localStorage.setItem('gatekeeper_v1', JSON.stringify(d));
+  });
+  await pag.reload();
+  await pag.waitForTimeout(400);
+  await pag.click('nav button[data-vista="proyectos"]');
+  comprobar('No hay segunda emergencia', (await pag.locator('[data-accion="desbloquear-emergencia"]').count()) === 0);
+
+  // --- Reactivar el prioritario pausado: vuelve como prioritario ---
+  await pag.locator('.proy-pausado [data-accion="reactivar"]').click();
+  await pag.waitForTimeout(300);
+  comprobar('El pausado vuelve como prioritario, no como activo', (await pag.locator('.proy-prioritario').count()) === 1);
+  const emergenciaReset = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')).emergenciaUsada);
+  comprobar('Con un prioritario de vuelta, la emergencia se rearma', emergenciaReset === false);
+  comprobar('Con prioritario en marcha ya no se ofrece emergencia', (await pag.locator('[data-accion="desbloquear-emergencia"]').count()) === 0);
+
   comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
   if (erroresJS.length) console.log('Errores:', erroresJS);
 

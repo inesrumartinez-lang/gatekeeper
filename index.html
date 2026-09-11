@@ -511,7 +511,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v24 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v25 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -818,6 +818,7 @@ function normalizarConfig(datos){
   if (typeof datos.config.orClave !== 'string') datos.config.orClave = '';
   if (typeof datos.bolsaGastada !== 'number') datos.bolsaGastada = 0;
   if (!Array.isArray(datos.eliminados)) datos.eliminados = [];
+  if (typeof datos.emergenciaUsada !== 'boolean') datos.emergenciaUsada = false;
 }
 
 // Intenta cargar de localStorage. Si falla, activa la pantalla de rescate.
@@ -890,6 +891,13 @@ function horasPeajePagadas(p){
   if (!p.peaje) return 0;
   if (p.peaje.premiado) return p.peaje.horas;
   return Math.min(bolsaDisponible(), p.peaje.horas);
+}
+
+// Desbloqueo de emergencia: si no queda NINGÚN prioritario en marcha
+// (todos pausados, terminados o inexistentes), se puede desbloquear un
+// proyecto sin peaje. Solo uno, hasta que vuelva a haber un prioritario.
+function emergenciaDisponible(){
+  return porEstado('prioritario').length === 0 && !estado.emergenciaUsada;
 }
 
 function peajeCompleto(p){
@@ -1424,6 +1432,8 @@ function tarjetaProyecto(p){
     h += '<div class="proy-acciones">';
     if (pct >= 100){
       h += '<button class="btn btn-verde btn-chico" data-accion="desbloquear">' + ico('unlock') + ' Desbloquear</button>';
+    } else if (emergenciaDisponible()){
+      h += '<button class="btn btn-verde btn-chico" data-accion="desbloquear-emergencia">' + ico('unlock') + ' Desbloqueo de emergencia</button>';
     }
     h += '<button class="btn btn-borde btn-chico" data-accion="borrar-bloqueado" style="color:var(--rojo)">' + ico('trash') + ' Borrar (+' + Math.round(PENALIZACION*100) + '% al resto)</button>';
     h += '</div>';
@@ -1474,7 +1484,7 @@ function tarjetaProyecto(p){
       }
     }
     h += '<div class="proy-acciones">';
-    if (p.estado === 'activo'){
+    if (p.estado === 'activo' || p.estado === 'prioritario'){
       h += '<button class="btn btn-borde btn-chico" data-accion="pausar">' + ico('pause') + ' Pausar</button>';
     }
     if (p.estado === 'pausado'){
@@ -1752,15 +1762,19 @@ function desbloquear(p){
     });
 }
 
-// Reactivar un proyecto pausado (respetando el límite de activos)
+// Reactivar un proyecto pausado: vuelve a lo que era (los prioritarios
+// no cuentan para el límite de activos)
 function reactivar(p){
-  if (porEstado('activo').length >= MAX_ACTIVOS){
+  var destino = p.estadoAnterior || (puedeSerPrioritario(p.tipo) ? 'prioritario' : 'activo');
+  if (destino !== 'prioritario' && porEstado('activo').length >= MAX_ACTIVOS){
     toast('Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes.', 4500);
     return;
   }
-  p.estado = 'activo';
+  p.estado = destino;
+  p.estadoAnterior = null;
+  if (destino === 'prioritario') estado.emergenciaUsada = false;   // vuelve el orden
   guardar(); render();
-  toast('«' + p.nombre + '» reactivado.');
+  toast('«' + p.nombre + '» reactivado' + (destino === 'prioritario' ? ' como prioritario.' : '.'));
 }
 
 // Terminar un proyecto. El último prioritario no se puede terminar si quedan
@@ -2218,6 +2232,7 @@ function crearProyecto(nombre, tipo, descripcion, esPrio, peaje, sinToast, diasE
     creadoEn: new Date().toISOString(),
     peaje: esPrio ? null : peaje
   };
+  if (esPrio) estado.emergenciaUsada = false;   // vuelve a haber prioritario
   estado.proyectos.push(p);
   guardar();
   cerrarNuevoProyecto();
@@ -2514,10 +2529,38 @@ function conectarEventos(){
     if (!p) return;
     switch (btn.dataset.accion){
       case 'desbloquear':      desbloquear(p); break;
+      case 'desbloquear-emergencia': {
+        // Sin prioritarios en marcha no hay forma de llenar la bolsa:
+        // se permite UN desbloqueo gratuito hasta que vuelva alguno
+        if (!emergenciaDisponible()) break;
+        if (porEstado('activo').length >= MAX_ACTIVOS){
+          toast('Ya tienes ' + MAX_ACTIVOS + ' proyectos activos. Termina o pausa otro antes.', 4500);
+          break;
+        }
+        confirmar('Desbloqueo de emergencia',
+          'No tienes ningún proyecto prioritario en marcha, así que «' + p.nombre +
+          '» puede desbloquearse sin peaje.\n\nSolo hay UN desbloqueo de emergencia: el siguiente exigirá volver a tener un prioritario activo y llenar la bolsa.',
+          'Desbloquear sin peaje', false, function(){
+            p.estado = 'activo';
+            p.peaje.premiado = true;   // peaje condonado: no queda pendiente
+            estado.emergenciaUsada = true;
+            guardar(); render();
+            toast('«' + p.nombre + '» desbloqueado por emergencia. Cuando vuelva un prioritario, se acabó la barra libre.', 5500);
+          });
+        break;
+      }
       case 'reactivar':        reactivar(p); break;
       case 'pausar':
+        // Para callejones sin salida o cuando el control lo tiene otra
+        // persona: el proyecto queda inactivo y recordamos a qué volver
+        p.estadoAnterior = p.estado;
         p.estado = 'pausado'; guardar(); render();
-        toast('«' + p.nombre + '» pausado. No cuenta para el límite de activos.');
+        if (p.estadoAnterior === 'prioritario'){
+          toast('«' + p.nombre + '» en pausa (en manos de otros). No contará para la racha ni el banner.' +
+            (porEstado('prioritario').length === 0 ? ' Sin prioritarios en marcha tienes un desbloqueo de emergencia.' : ''), 6000);
+        } else {
+          toast('«' + p.nombre + '» pausado. No cuenta para el límite de activos.');
+        }
         break;
       case 'terminar':         terminar(p); break;
       case 'borrar-bloqueado': borrarBloqueado(p); break;
@@ -2533,6 +2576,7 @@ function conectarEventos(){
           'Reabrir', false, function(){
             if (puedeSerPrioritario(p.tipo)){
               p.estado = 'prioritario';
+              estado.emergenciaUsada = false;
             } else if (porEstado('activo').length < MAX_ACTIVOS){
               p.estado = 'activo';
             } else {
