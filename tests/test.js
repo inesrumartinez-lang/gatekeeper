@@ -214,6 +214,63 @@ function comprobar(nombre, cond){
   comprobar('Con un prioritario de vuelta, la vía libre se renueva', viaLibreReset === false);
   comprobar('Con prioritario en marcha no se ofrece la vía libre', (await pag.locator('[data-accion="via-libre"]').count()) === 0);
 
+  // --- Guardián del cronómetro: nunca más de 6h por registro ---
+  await pag.click('nav button[data-vista="tiempo"]');
+  await pag.fill('#in-horas', '7');
+  await pag.click('#btn-manual');
+  await pag.waitForTimeout(300);
+  comprobar('La entrada manual rechaza más de 6h', /Máximo 6h/.test(await pag.locator('#toast').textContent()));
+  // Cronómetro olvidado: simular 7h corriendo y pararlo
+  await pag.selectOption('#sel-crono', { index: 0 });
+  await pag.click('#btn-crono');
+  await pag.waitForTimeout(300);
+  await pag.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('gatekeeper_v1'));
+    d.crono.inicio = Date.now() - 7 * 3600000;   // como si llevara 7 horas
+    localStorage.setItem('gatekeeper_v1', JSON.stringify(d));
+  });
+  await pag.reload();
+  await pag.waitForTimeout(400);
+  await pag.click('nav button[data-vista="tiempo"]');
+  comprobar('El cronómetro pasado de 6h avisa en pantalla', /Más de 6h/.test(await pag.locator('#crono-etiqueta').textContent()));
+  await pag.click('#btn-crono');   // parar
+  await pag.waitForSelector('#velo-sesion.visible', { timeout: 5000 });
+  comprobar('Al parar, se abre la edición para ajustar la duración real', (await pag.inputValue('#ses-horas')) === '6');
+  await pag.fill('#ses-horas', '2');
+  await pag.click('#ses-guardar');
+  await pag.waitForTimeout(300);
+  const sesionesLargas = await pag.evaluate(() =>
+    JSON.parse(localStorage.getItem('gatekeeper_v1')).sesiones.filter(s => s.horas > 6).length);
+  comprobar('Ningún registro supera las 6h', sesionesLargas === 0);
+
+  // --- Sesgo de estimación en Métricas ---
+  await pag.evaluate(() => {
+    const hoyC = (() => { const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
+    const ayerC = (() => { const d = new Date(Date.now() - 86400000);
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
+    const d = JSON.parse(localStorage.getItem('gatekeeper_v1'));
+    // Dos terminados con estimación: tú estimaste 1 y 1 día; fueron 2 y 2 (50% de menos)
+    // La IA estimó 4 y 4 (100% de más)
+    d.proyectos.push({ id: 'sg1', nombre: 'Sesgo uno', tipo: 'personal', estado: 'terminado', avance: 100,
+      creadoEn: '2020-01-01T00:00:00.000Z', terminadoEn: new Date().toISOString(),
+      peaje: { horas: 1, horasBase: 1, dias: 1, diasUsuario: 1, diasIA: 4, suerte: false } });
+    d.proyectos.push({ id: 'sg2', nombre: 'Sesgo dos', tipo: 'personal', estado: 'terminado', avance: 100,
+      creadoEn: '2020-01-01T00:00:00.000Z', terminadoEn: new Date().toISOString(),
+      peaje: { horas: 1, horasBase: 1, dias: 1, diasUsuario: 1, diasIA: 4, suerte: false } });
+    d.sesiones.push({ id: 'sgs1', proyectoId: 'sg1', fecha: ayerC, horas: 1, prioritario: false, tipo: 'personal', manual: true });
+    d.sesiones.push({ id: 'sgs2', proyectoId: 'sg1', fecha: hoyC, horas: 1, prioritario: false, tipo: 'personal', manual: true });
+    d.sesiones.push({ id: 'sgs3', proyectoId: 'sg2', fecha: ayerC, horas: 1, prioritario: false, tipo: 'personal', manual: true });
+    d.sesiones.push({ id: 'sgs4', proyectoId: 'sg2', fecha: hoyC, horas: 1, prioritario: false, tipo: 'personal', manual: true });
+    localStorage.setItem('gatekeeper_v1', JSON.stringify(d));
+  });
+  await pag.reload();
+  await pag.waitForTimeout(400);
+  await pag.click('nav button[data-vista="panel"]');
+  const metricasSesgo = await pag.locator('#metricas-extra').textContent();
+  comprobar('Tu sesgo: estimas un 50% de menos', /estimas un 50% de menos/.test(metricasSesgo));
+  comprobar('El sesgo de la IA: estima un 100% de más', /estima un 100% de más/.test(metricasSesgo));
+
   comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
   if (erroresJS.length) console.log('Errores:', erroresJS);
 

@@ -430,7 +430,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
           </div>
         </label>
         <label class="campo"><span class="et">Horas</span>
-          <input type="number" id="in-horas" min="0.25" max="24" step="0.25" placeholder="1.5" inputmode="decimal">
+          <input type="number" id="in-horas" min="0.25" max="6" step="0.25" placeholder="1.5" inputmode="decimal">
         </label>
         <label class="campo"><span class="et">Fecha</span>
           <input type="date" id="in-fecha">
@@ -511,7 +511,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v26 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v27 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -640,7 +640,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
     <h3><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg> Editar registro</h3>
     <p class="msj" id="ses-proyecto" style="margin-bottom:12px"></p>
     <label class="campo"><span class="et">Horas</span>
-      <input type="number" id="ses-horas" min="0.25" max="24" step="0.25" inputmode="decimal">
+      <input type="number" id="ses-horas" min="0.25" max="6" step="0.25" inputmode="decimal">
     </label>
     <label class="campo"><span class="et">Fecha</span>
       <input type="date" id="ses-fecha">
@@ -691,6 +691,7 @@ var MAX_ACTIVOS = 3;                     // máximo de proyectos activos a la ve
 var HORAS_POR_DIA = 1;                   // horas de peaje (en tesis) por día estimado
 var MAX_BLOQUEADOS = 5;                  // máximo de proyectos bloqueados en cola
 var HORAS_DIA_EXTRA = 0.5;               // coste en prioritarios de cada día que exceda la estimación
+var MAX_HORAS_REGISTRO = 6;              // ningún registro puede superar las 6 horas
 var DIAS_AVISO = 5;                      // días sin prioritario antes del banner rojo
 var PENALIZACION = 0.10;                 // +10% de peaje al borrar un bloqueado
 var PROB_SUERTE = 0.10;                  // probabilidad de que la ruleta toque (1 de cada 10)
@@ -1270,6 +1271,25 @@ function renderPanel(){
     if (s.fecha.indexOf(prefijoMes) === 0) totalMesActual += s.horas;
     if (s.fecha >= corte7 && s.fecha <= hoy()) hace7 += s.horas;
   });
+  // Sesgo de estimación: en los terminados con peaje, comparar los días
+  // estimados (tuyos y de la IA, guardados al crear) con los realmente
+  // trabajados. Media de la razón estimado/real con al menos 2 proyectos.
+  function sesgoMedio(obtenerEstimado){
+    var razones = [];
+    porEstado('terminado').forEach(function(p){
+      var est = obtenerEstimado(p);
+      var real = diasTrabajados(p);
+      if (est && real > 0) razones.push(est / real);
+    });
+    if (razones.length < 2) return null;   // con 1 proyecto aún es anécdota
+    var media = razones.reduce(function(a, r){ return a + r; }, 0) / razones.length;
+    if (media < 0.95) return 'un ' + Math.round((1 - media) * 100) + '% de menos';
+    if (media > 1.05) return 'un ' + Math.round((media - 1) * 100) + '% de más';
+    return 'casi clavado';
+  }
+  var sesgoTuyo = sesgoMedio(function(p){ return p.peaje && p.peaje.diasUsuario; });
+  var sesgoIA = sesgoMedio(function(p){ return p.peaje && p.peaje.diasIA; });
+
   var valorados = porEstado('terminado').filter(function(p){ return p.valoracion; });
   var mediaVal = valorados.length
     ? (Math.round(valorados.reduce(function(a, p){ return a + p.valoracion; }, 0) / valorados.length * 10) / 10) + ' ★'
@@ -1277,6 +1297,8 @@ function renderPanel(){
   var filasMet = [
     ['Horas este mes', fmtHoras(totalMesActual)],
     ['Puntuación media (terminados)', mediaVal],
+    ['Tu sesgo al estimar', sesgoTuyo ? 'estimas ' + sesgoTuyo : '—'],
+    ['Sesgo de la IA', sesgoIA ? 'estima ' + sesgoIA : '—'],
     ['Media diaria (últimos 7 días)', fmtHoras(Math.round(hace7 / 7 * 100) / 100)],
     ['Proyectos terminados', String(porEstado('terminado').length)],
     ['Proyectos abandonados', String((estado.eliminados || []).length)],
@@ -1732,8 +1754,16 @@ function actualizarTiempoCrono(){
   if (!estado.crono) return;
   var seg = Math.max(0, Math.floor((Date.now() - estado.crono.inicio) / 1000));
   var h = Math.floor(seg/3600), m = Math.floor((seg%3600)/60), s = seg%60;
-  document.getElementById('crono-tiempo').textContent =
-    h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  var reloj = document.getElementById('crono-tiempo');
+  reloj.textContent = h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  // Pasadas las 6 horas, casi seguro que se te olvidó pararlo
+  if (seg > MAX_HORAS_REGISTRO * 3600){
+    reloj.style.color = 'var(--rojo)';
+    document.getElementById('crono-etiqueta').textContent =
+      '¿Sigues ahí? Más de ' + MAX_HORAS_REGISTRO + 'h: al parar se te pedirá la duración real (máx. ' + MAX_HORAS_REGISTRO + 'h).';
+  } else {
+    reloj.style.color = '';
+  }
 }
 
 /* ================= ACCIONES SOBRE PROYECTOS ================= */
@@ -2265,7 +2295,20 @@ function alternarCrono(){
       return;
     }
     estado.crono = null;
-    registrarSesion(pid, transcurrido / 3600000, hoy(), false);
+    var horasCrono = transcurrido / 3600000;
+    if (horasCrono > MAX_HORAS_REGISTRO){
+      // Guardián del cronómetro: nunca un registro de más de 6h. Se guarda
+      // el tope y se abre la edición para que ajustes la duración real.
+      if (registrarSesion(pid, MAX_HORAS_REGISTRO, hoy(), false)){
+        render();
+        var ultima = estado.sesiones[estado.sesiones.length - 1];
+        toast('El cronómetro llevaba ' + fmtHoras(horasCrono) + ': se te olvidó pararlo. Se guardan ' +
+          MAX_HORAS_REGISTRO + 'h como máximo; ajusta ahora la duración real.', 6500);
+        setTimeout(function(){ abrirEditarSesion(ultima.id); }, 600);
+      }
+      return;
+    }
+    registrarSesion(pid, horasCrono, hoy(), false);
     render();
   } else {
     // Empezar: validar proyecto elegido
@@ -2292,7 +2335,8 @@ function guardarManual(){
   var horas = parseFloat(document.getElementById('in-horas').value);
   var fecha = document.getElementById('in-fecha').value;
   if (!sel.value || !proyecto(sel.value)){ toast('Elige un proyecto.'); return; }
-  if (!horas || horas <= 0 || horas > 24){ toast('Indica unas horas válidas (entre 0.25 y 24).'); return; }
+  if (!horas || horas <= 0){ toast('Indica unas horas válidas.'); return; }
+  if (horas > MAX_HORAS_REGISTRO){ toast('Máximo ' + MAX_HORAS_REGISTRO + 'h por registro: nadie rinde más de eso del tirón.'); return; }
   if (!fecha){ toast('Indica la fecha.'); return; }
   if (fecha > hoy()){ toast('No puedes registrar horas del futuro. Ojalá.'); return; }
   if (registrarSesion(sel.value, horas, fecha, true)){
@@ -2330,7 +2374,8 @@ function guardarEdicionSesion(){
   if (!s) return;
   var horas = parseFloat(document.getElementById('ses-horas').value);
   var fecha = document.getElementById('ses-fecha').value;
-  if (!horas || horas <= 0 || horas > 24){ toast('Indica unas horas válidas (entre 0.25 y 24).'); return; }
+  if (!horas || horas <= 0){ toast('Indica unas horas válidas.'); return; }
+  if (horas > MAX_HORAS_REGISTRO){ toast('Máximo ' + MAX_HORAS_REGISTRO + 'h por registro.'); return; }
   if (!fecha){ toast('Indica la fecha.'); return; }
   if (fecha > hoy()){ toast('No puedes registrar horas del futuro. Ojalá.'); return; }
   s.horas = Math.round(horas * 100) / 100;
