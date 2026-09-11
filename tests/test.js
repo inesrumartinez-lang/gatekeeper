@@ -168,22 +168,23 @@ function comprobar(nombre, cond){
   await pag.waitForTimeout(300);
   comprobar('El prioritario pausado queda inactivo', (await pag.locator('.proy-prioritario').count()) === 0 && (await pag.locator('.proy-pausado').count()) === 1);
 
-  // --- Sin prioritarios en marcha: desbloqueo de emergencia ---
-  comprobar('El bloqueado ofrece desbloqueo de emergencia', (await pag.locator('[data-accion="desbloquear-emergencia"]').count()) === 1);
-  await pag.locator('[data-accion="desbloquear-emergencia"]').click();
+  // --- Sin prioritarios en marcha: vía libre (premio por llegar al tope) ---
+  comprobar('El bloqueado ofrece la vía libre', (await pag.locator('[data-accion="via-libre"]').count()) === 1);
+  await pag.locator('[data-accion="via-libre"]').click();
   await pag.waitForSelector('#velo-confirmar.visible');
-  comprobar('La emergencia se explica antes de canjear', /sin peaje/.test(await pag.locator('#conf-msj').textContent()));
+  const msjVia = await pag.locator('#conf-msj').textContent();
+  comprobar('La vía libre se presenta en positivo (llegar al tope)', /Has llegado al tope/.test(msjVia) && /sin peaje/.test(msjVia));
   await pag.click('#conf-ok');
   await pag.waitForTimeout(300);
-  const trasEmergencia = await pag.evaluate(() => {
+  const trasViaLibre = await pag.evaluate(() => {
     const d = JSON.parse(localStorage.getItem('gatekeeper_v1'));
     return { estado: d.proyectos.find(p => p.nombre === 'Otro en cola').estado,
-             gastada: d.bolsaGastada, usada: d.emergenciaUsada };
+             gastada: d.bolsaGastada, usada: d.viaLibreUsada };
   });
-  comprobar('El proyecto se activa sin gastar bolsa', trasEmergencia.estado === 'activo' && trasEmergencia.gastada === 3);
-  comprobar('La emergencia queda consumida', trasEmergencia.usada === true);
+  comprobar('El proyecto se activa sin gastar bolsa', trasViaLibre.estado === 'activo' && trasViaLibre.gastada === 3);
+  comprobar('La vía libre queda consumida', trasViaLibre.usada === true);
 
-  // --- Solo hay UNA emergencia: otro bloqueado no la ofrece ---
+  // --- Solo una vía libre cada vez: otro bloqueado no la ofrece ---
   await pag.evaluate(() => {
     const d = JSON.parse(localStorage.getItem('gatekeeper_v1'));
     d.proyectos.push({ id: 'blq2', nombre: 'Segundo en cola', tipo: 'otro', estado: 'bloqueado', avance: 0,
@@ -194,15 +195,24 @@ function comprobar(nombre, cond){
   await pag.reload();
   await pag.waitForTimeout(400);
   await pag.click('nav button[data-vista="proyectos"]');
-  comprobar('No hay segunda emergencia', (await pag.locator('[data-accion="desbloquear-emergencia"]').count()) === 0);
+  comprobar('No hay segunda vía libre', (await pag.locator('[data-accion="via-libre"]').count()) === 0);
+
+  // --- Terminar el proyecto de vía libre tampoco regala otra ---
+  await pag.locator('.proy-activo [data-accion="terminar"]').click();
+  await pag.waitForSelector('#velo-confirmar.visible');
+  await pag.click('#conf-ok');
+  await pag.waitForSelector('#velo-valorar.visible');
+  await pag.click('#val-saltar');
+  await pag.waitForTimeout(300);
+  comprobar('Terminado el de vía libre, sigue sin haber otra', (await pag.locator('[data-accion="via-libre"]').count()) === 0);
 
   // --- Reactivar el prioritario pausado: vuelve como prioritario ---
   await pag.locator('.proy-pausado [data-accion="reactivar"]').click();
   await pag.waitForTimeout(300);
   comprobar('El pausado vuelve como prioritario, no como activo', (await pag.locator('.proy-prioritario').count()) === 1);
-  const emergenciaReset = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')).emergenciaUsada);
-  comprobar('Con un prioritario de vuelta, la emergencia se rearma', emergenciaReset === false);
-  comprobar('Con prioritario en marcha ya no se ofrece emergencia', (await pag.locator('[data-accion="desbloquear-emergencia"]').count()) === 0);
+  const viaLibreReset = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')).viaLibreUsada);
+  comprobar('Con un prioritario de vuelta, la vía libre se renueva', viaLibreReset === false);
+  comprobar('Con prioritario en marcha no se ofrece la vía libre', (await pag.locator('[data-accion="via-libre"]').count()) === 0);
 
   comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
   if (erroresJS.length) console.log('Errores:', erroresJS);
