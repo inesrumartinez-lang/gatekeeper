@@ -291,8 +291,9 @@ function comprobar(nombre, cond){
   await pag.fill('#aj-webhook', 'http://localhost:' + PUERTO + '/hook');
   await pag.click('#btn-guardar-webhook');
   await pag.waitForTimeout(600);
-  comprobar('La copia automática llega al webhook', webhookRecibido !== null && /"proyectos"/.test(webhookRecibido));
-  comprobar('La clave de OpenRouter no viaja en la copia automática', webhookRecibido !== null && JSON.parse(webhookRecibido).config.orClave === '');
+  comprobar('La copia automática llega al webhook en su sobre', webhookRecibido !== null && /"copia"/.test(webhookRecibido) && /"fecha"/.test(webhookRecibido));
+  comprobar('La clave de OpenRouter no viaja en la copia automática',
+    webhookRecibido !== null && JSON.parse(JSON.parse(webhookRecibido).copia).config.orClave === '');
   const copiaAuto = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')).ultimaCopiaAuto);
   comprobar('Queda registrado el envío automático', typeof copiaAuto === 'string');
   // En la próxima apertura, antes de 7 días, no se reenvía

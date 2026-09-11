@@ -518,7 +518,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v28 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v29 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -2498,11 +2498,14 @@ function copiaAutomatica(){
 
   var datos = JSON.parse(JSON.stringify(estado));
   datos.config.orClave = '';   // la clave API no sale del dispositivo
+  // La copia viaja como texto dentro de un sobre {fecha, copia} para que
+  // el escenario de Make pueda adjuntarla tal cual a un email.
   // text/plain y no-cors: petición simple que los webhooks aceptan sin
   // preflight; la respuesta es opaca, así que el envío se da por bueno
+  var sobre = JSON.stringify({ app: 'gatekeeper', fecha: hoy(), copia: JSON.stringify(datos, null, 2) });
   fetch(url, { method: 'POST', mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(datos) })
+    body: sobre })
   .then(function(){
     estado.ultimaCopiaAuto = new Date().toISOString();
     estado.ultimaCopia = new Date().toISOString();
