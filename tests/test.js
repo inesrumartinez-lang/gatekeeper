@@ -371,7 +371,7 @@ function comprobar(nombre, cond){
   await pag.click('nav button[data-vista="proyectos"]');
   const tarjetaUam = await pag.locator('.proy[data-id="uam"]').textContent();
   comprobar('UAM figura de fondo', /De fondo/.test(tarjetaUam));
-  comprobar('Institucional va en cianes', /#93c7cf/.test((await pag.getAttribute('.proy[data-id="uam"]', 'style')) || ''));
+  comprobar('Institucional va en rojos', /#e08585/.test((await pag.getAttribute('.proy[data-id="uam"]', 'style')) || ''));
 
   comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
   if (erroresJS.length) console.log('Errores:', erroresJS);
