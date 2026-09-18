@@ -302,6 +302,40 @@ function comprobar(nombre, cond){
   await pag.waitForTimeout(800);
   comprobar('Antes de 7 días no se reenvía otra copia', webhookRecibido === null);
 
+  // --- Proyectos de fondo: no bloquean la vía libre ---
+  // Estado: 'Tesis doctoral' es el único prioritario; 'Segundo en cola' sigue bloqueado
+  await pag.click('nav button[data-vista="proyectos"]');
+  comprobar('Con un prioritario concreto no hay vía libre', (await pag.locator('[data-accion="via-libre"]').count()) === 0);
+  await pag.locator('.proy-prioritario [data-accion="fondo"]').click();
+  await pag.waitForTimeout(300);
+  const tarjetaFondo = await pag.locator('.proy-prioritario').textContent();
+  comprobar('La tarjeta marca el proyecto de fondo', /De fondo: no bloquea la vía libre/.test(tarjetaFondo));
+  comprobar('Solo con el de fondo abierto, la vía libre aparece', (await pag.locator('[data-accion="via-libre"]').count()) === 1);
+  // Sus horas siguen llenando la bolsa
+  const bolsaAntes = await pag.locator('#bolsa-valor').textContent();
+  await pag.click('nav button[data-vista="tiempo"]');
+  await pag.selectOption('#sel-manual', { index: 0 });   // el prioritario de fondo
+  await pag.fill('#in-horas', '1');
+  await pag.click('#btn-manual');
+  await pag.waitForTimeout(300);
+  const bolsaDespues = await pag.locator('#bolsa-valor').textContent();
+  comprobar('Las horas del proyecto de fondo llenan la bolsa', bolsaAntes !== bolsaDespues);
+  // Con la vía libre gastada, quitarlo de fondo la renueva
+  await pag.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('gatekeeper_v1'));
+    d.viaLibreUsada = true;
+    localStorage.setItem('gatekeeper_v1', JSON.stringify(d));
+  });
+  await pag.reload();
+  await pag.waitForTimeout(400);
+  await pag.click('nav button[data-vista="proyectos"]');
+  comprobar('Vía libre gastada: no se ofrece aunque solo haya fondo', (await pag.locator('[data-accion="via-libre"]').count()) === 0);
+  await pag.locator('.proy-prioritario [data-accion="fondo"]').click();
+  await pag.waitForTimeout(300);
+  const trasQuitar = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')));
+  comprobar('Quitar de fondo lo devuelve a concreto y renueva la vía libre',
+    trasQuitar.viaLibreUsada === false && !trasQuitar.proyectos.find(p => p.estado === 'prioritario').fondo);
+
   comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
   if (erroresJS.length) console.log('Errores:', erroresJS);
 

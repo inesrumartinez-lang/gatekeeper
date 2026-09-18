@@ -518,7 +518,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v30 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v31 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -908,12 +908,21 @@ function horasPeajePagadas(p){
   return Math.min(bolsaDisponible(), p.peaje.horas);
 }
 
-// Vía libre: llegar al tope de tesis y AI research (ningún prioritario en
-// marcha porque están terminados o en manos de otros) es un logro, y se
-// premia con UN desbloqueo sin peaje. Solo uno cada vez: aunque lo
-// termines, no hay otro hasta que vuelva un prioritario en marcha.
+// Prioritarios "concretos": los que cuentan para la vía libre. Los
+// proyectos DE FONDO (p.fondo, como una tesis-contenedor que nunca se
+// termina) quedan fuera del chequeo: siguen siendo prioritarios a todos
+// los efectos (horas a la bolsa, racha, banner), pero su presencia no
+// impide el premio.
+function prioritariosConcretos(){
+  return porEstado('prioritario').filter(function(p){ return !p.fondo; });
+}
+
+// Vía libre: llegar al tope de tesis y AI research (ningún prioritario
+// concreto en marcha) es un logro, y se premia con UN desbloqueo sin
+// peaje. Solo uno cada vez: aunque lo termines, no hay otro hasta que
+// vuelva un prioritario concreto en marcha.
 function viaLibreDisponible(){
-  return porEstado('prioritario').length === 0 && !estado.viaLibreUsada;
+  return prioritariosConcretos().length === 0 && !estado.viaLibreUsada;
 }
 
 function peajeCompleto(p){
@@ -1534,9 +1543,15 @@ function tarjetaProyecto(p){
         h += '<div class="proy-acciones" style="margin-top:6px"><button class="btn btn-borde btn-chico" data-accion="estimar-dias">Definir duración estimada</button></div>';
       }
     }
+    if (p.estado === 'prioritario' && p.fondo){
+      h += '<div class="proy-avance" style="color:var(--gris)">De fondo: no bloquea la vía libre (sus horas sí llenan la bolsa)</div>';
+    }
     h += '<div class="proy-acciones">';
     if (p.estado === 'activo' || p.estado === 'prioritario'){
       h += '<button class="btn btn-borde btn-chico" data-accion="pausar">' + ico('pause') + ' Pausar</button>';
+    }
+    if (p.estado === 'prioritario'){
+      h += '<button class="btn btn-borde btn-chico" data-accion="fondo">' + (p.fondo ? 'Quitar de fondo' : 'A fondo') + '</button>';
     }
     if (p.estado === 'pausado'){
       h += '<button class="btn btn-azul btn-chico" data-accion="reactivar">' + ico('play') + ' Reactivar</button>';
@@ -1831,7 +1846,7 @@ function reactivar(p){
   }
   p.estado = destino;
   p.estadoAnterior = null;
-  if (destino === 'prioritario') estado.viaLibreUsada = false;   // la vía libre se renueva
+  if (destino === 'prioritario' && !p.fondo) estado.viaLibreUsada = false;   // la vía libre se renueva
   guardar(); render();
   toast('«' + p.nombre + '» reactivado' + (destino === 'prioritario' ? ' como prioritario.' : '.'));
 }
@@ -2664,7 +2679,7 @@ function conectarEventos(){
           break;
         }
         confirmar('Vía libre',
-          'Has llegado al tope: ningún prioritario en marcha en tesis ni en AI research. Como premio, «' + p.nombre +
+          'Has llegado al tope: ningún prioritario concreto en marcha en tesis ni en AI research. Como premio, «' + p.nombre +
           '» puede desbloquearse sin peaje.\n\nSolo uno cada vez: aunque lo termines, no habrá otro desbloqueo hasta que vuelva a haber un prioritario en marcha.',
           'Desbloquear sin peaje', false, function(){
             p.estado = 'activo';
@@ -2683,7 +2698,7 @@ function conectarEventos(){
         p.estado = 'pausado'; guardar(); render();
         if (p.estadoAnterior === 'prioritario'){
           toast('«' + p.nombre + '» en pausa (en manos de otros). No contará para la racha ni el banner.' +
-            (porEstado('prioritario').length === 0 ? ' Has llegado al tope: tienes un desbloqueo de vía libre.' : ''), 6000);
+            (prioritariosConcretos().length === 0 ? ' Has llegado al tope: tienes un desbloqueo de vía libre.' : ''), 6000);
         } else {
           toast('«' + p.nombre + '» pausado. No cuenta para el límite de activos.');
         }
@@ -2694,6 +2709,20 @@ function conectarEventos(){
       case 'valorar':
         abrirValoracion(p);
         break;
+      case 'fondo':
+        // Proyecto de fondo: contenedor permanente (una tesis entera) que
+        // no debe impedir la vía libre. Quitarlo de fondo lo devuelve a
+        // prioritario concreto y renueva la vía libre.
+        p.fondo = !p.fondo;
+        if (!p.fondo) estado.viaLibreUsada = false;
+        guardar(); render();
+        if (p.fondo){
+          toast('«' + p.nombre + '» pasa a fondo: ya no bloquea la vía libre.' +
+            (viaLibreDisponible() ? ' De hecho, ya tienes una disponible.' : ''), 5500);
+        } else {
+          toast('«' + p.nombre + '» vuelve a ser prioritario concreto.');
+        }
+        break;
       case 'reabrir': {
         // Reabrir un terminado: vuelve como prioritario si su tipo lo permite,
         // como activo si hay hueco, o pausado si no lo hay
@@ -2702,7 +2731,7 @@ function conectarEventos(){
           'Reabrir', false, function(){
             if (puedeSerPrioritario(p.tipo)){
               p.estado = 'prioritario';
-              estado.viaLibreUsada = false;
+              if (!p.fondo) estado.viaLibreUsada = false;
             } else if (porEstado('activo').length < MAX_ACTIVOS){
               p.estado = 'activo';
             } else {
