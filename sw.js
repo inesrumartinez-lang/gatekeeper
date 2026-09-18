@@ -5,7 +5,7 @@
  * caché si es posible y se cae a red solo cuando hace falta.
  */
 
-const NOMBRE_CACHE = 'gatekeeper-v31';
+const NOMBRE_CACHE = 'gatekeeper-v32';
 
 // Archivos que forman la app completa (app shell)
 const ARCHIVOS = [

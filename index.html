@@ -367,6 +367,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
             <option value="">Todas</option>
             <option value="tesis">Tesis</option>
             <option value="airesearch">AI research</option>
+        <option value="institucional">Institucional (UAM, AMPD…)</option>
             <option value="freelance">Freelance</option>
             <option value="personal">Personal</option>
             <option value="otro">Otro</option>
@@ -518,7 +519,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v31 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v32 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -559,6 +560,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
       <select id="np-tipo">
         <option value="tesis">Tesis</option>
         <option value="airesearch">AI research</option>
+        <option value="institucional">Institucional (UAM, AMPD…)</option>
         <option value="freelance">Freelance</option>
         <option value="personal" selected>Personal</option>
         <option value="otro">Otro</option>
@@ -600,7 +602,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         final será la <b>media de las dos</b>. El peaje será de 1h por día de esa media…
         salvo que la ruleta (1 de cada 10) salga con premio y lo deje sin peaje.
         El peaje se canjea con la <b>bolsa de horas</b> (1h de tesis llena 1h;
-        1h de AI research, 45 min) y cada canje la <b>vacía por completo</b>,
+        1h de AI research, 45 min; 1h institucional, 30 min) y cada canje la <b>vacía por completo</b>,
         aunque sobren horas: el siguiente desbloqueo empieza de cero. Y ojo: si te pasas de los días
         estimados, cada día extra de trabajo costará 30 min más de prioritario.
       </p>
@@ -709,23 +711,27 @@ var NOMBRE_ESTADO = {
   prioritario:'Prioritario', activo:'Activo', bloqueado:'Bloqueado',
   pausado:'Pausado', terminado:'Terminado'
 };
-var NOMBRE_TIPO = { tesis:'Tesis', airesearch:'AI research', freelance:'Freelance', personal:'Personal', otro:'Otro' };
+var NOMBRE_TIPO = { tesis:'Tesis', airesearch:'AI research', institucional:'Institucional (UAM, AMPD…)', freelance:'Freelance', personal:'Personal', otro:'Otro' };
 // Colores por categoría: cada tipo tiene su familia (tesis en azules,
 // AI research en verdes…) y cada proyecto un tono distinto dentro de ella,
 // para reconocer de un vistazo a qué categoría pertenece
 var PALETAS_TIPO = {
   tesis:      ['#8fb8d8', '#6f9fc9', '#b3d2e8', '#5b88b5'],   // azules
   airesearch: ['#7fd8c3', '#5fc0a8', '#a8e6d5', '#49a68d'],   // verdes aguamarina
+  institucional: ['#93c7cf', '#6fb0ba', '#bde0e6', '#548f99'],  // cianes apagados
   freelance:  ['#b5a3d8', '#9b85c7', '#cfc2e8', '#8571b3'],   // lavandas
   personal:   ['#d9bd8d', '#c9a76b', '#e8d8b3', '#b39055'],   // arenas
   otro:       ['#d8a3c2', '#c787ac', '#e8c4da', '#b56f95']    // rosas
 };
 var MESES_LARGOS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-// Tipos que pueden ser prioritarios (y en los que se paga peaje)
-var TIPOS_PRIORITARIOS = ['tesis', 'airesearch'];
-// Cambio de moneda del peaje: 1.5h de tesis equivalen a 2h de AI research,
-// así que cada hora que no sea de tesis descuenta solo 0.75h de peaje
-var FACTOR_NO_TESIS = 1.5 / 2;
+// Tipos que pueden ser prioritarios (y cuyas horas llenan la bolsa)
+var TIPOS_PRIORITARIOS = ['tesis', 'airesearch', 'institucional'];
+// Cambio de moneda de la bolsa por categoría:
+// 1h de tesis = 1h · 1h de AI research = 45 min · 1h institucional = 30 min
+var VALOR_BOLSA = { tesis: 1, airesearch: 0.75, institucional: 0.5 };
+function valorBolsaDe(tipo){
+  return VALOR_BOLSA[tipo] !== undefined ? VALOR_BOLSA[tipo] : 0.75;
+}
 
 function puedeSerPrioritario(tipo){
   return TIPOS_PRIORITARIOS.indexOf(tipo) !== -1;
@@ -896,7 +902,7 @@ function bolsaDisponible(){
   estado.sesiones.forEach(function(s){
     if (!s.prioritario) return;
     var tipoSesion = s.tipo || (proyecto(s.proyectoId) ? proyecto(s.proyectoId).tipo : 'tesis');
-    ganado += s.horas * (tipoSesion === 'tesis' ? 1 : FACTOR_NO_TESIS);
+    ganado += s.horas * valorBolsaDe(tipoSesion);
   });
   return Math.max(0, ganado - (estado.bolsaGastada || 0));
 }
@@ -1274,7 +1280,7 @@ function renderPanel(){
   // Bolsa de horas y peajes pendientes
   document.getElementById('bolsa-linea').innerHTML =
     'Bolsa disponible: <b style="color:var(--texto)">' + fmtHoras(bolsaDisponible()) + '</b>' +
-    ' · se llena con horas de prioritarios (1h tesis = 1h · 1h AI research = 45 min) y cada canje la vacía POR COMPLETO, aunque sobren horas.';
+    ' · se llena con horas de prioritarios (1h tesis = 1h · 1h AI research = 45 min · 1h institucional = 30 min) y cada canje la vacía POR COMPLETO, aunque sobren horas.';
   var bloqueados = porEstado('bloqueado');
   var lp = document.getElementById('lista-peajes');
   if (bloqueados.length === 0){

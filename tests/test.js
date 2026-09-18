@@ -336,6 +336,43 @@ function comprobar(nombre, cond){
   comprobar('Quitar de fondo lo devuelve a concreto y renueva la vía libre',
     trasQuitar.viaLibreUsada === false && !trasQuitar.proyectos.find(p => p.estado === 'prioritario').fondo);
 
+  // --- Categoría Institucional: prioritaria y con cambio a 30 min por hora ---
+  await pag.click('nav button[data-vista="proyectos"]');
+  await pag.click('#fab-nuevo');
+  await pag.selectOption('#np-tipo', 'institucional');
+  comprobar('Institucional puede ser prioritario (checkbox visible)', await pag.locator('#np-campo-prio').isVisible());
+  await pag.click('#np-cancelar');
+  await pag.evaluate(() => {
+    localStorage.setItem('gatekeeper_v1', JSON.stringify({
+      version: 1, crono: null, bolsaGastada: 0, eliminados: [], viaLibreUsada: false,
+      config: { orClave: '', orModelo: 'x' },
+      proyectos: [
+        { id: 'tz', nombre: 'Tesis Z', tipo: 'tesis', estado: 'prioritario', avance: 0, diasEstimados: 30, creadoEn: '2020-01-01T00:00:00.000Z', peaje: null },
+        { id: 'uam', nombre: 'UAM', tipo: 'institucional', estado: 'prioritario', avance: 0, diasEstimados: 365, fondo: true, creadoEn: '2020-01-01T00:00:00.000Z', peaje: null }
+      ],
+      sesiones: []
+    }));
+  });
+  await pag.reload();
+  await pag.waitForTimeout(400);
+  // 2h institucionales llenan solo 1h de bolsa; 1h de tesis llena 1h
+  await pag.click('nav button[data-vista="tiempo"]');
+  await pag.selectOption('#sel-manual', 'uam');
+  await pag.fill('#in-horas', '2');
+  await pag.click('#btn-manual');
+  await pag.waitForTimeout(300);
+  comprobar('2h institucionales llenan 1h de bolsa (cambio 0.5)', (await pag.locator('#bolsa-valor').textContent()) === '1h');
+  await pag.selectOption('#sel-manual', 'tz');
+  await pag.fill('#in-horas', '1');
+  await pag.click('#btn-manual');
+  await pag.waitForTimeout(300);
+  comprobar('1h de tesis suma 1h entera (total 2h)', (await pag.locator('#bolsa-valor').textContent()) === '2h');
+  // El institucional de fondo mantiene su marcador y colores cian
+  await pag.click('nav button[data-vista="proyectos"]');
+  const tarjetaUam = await pag.locator('.proy[data-id="uam"]').textContent();
+  comprobar('UAM figura de fondo', /De fondo/.test(tarjetaUam));
+  comprobar('Institucional va en cianes', /#93c7cf/.test((await pag.getAttribute('.proy[data-id="uam"]', 'style')) || ''));
+
   comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
   if (erroresJS.length) console.log('Errores:', erroresJS);
 
