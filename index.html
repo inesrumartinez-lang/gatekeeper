@@ -241,6 +241,15 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
 .hist-fila b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
 .hist-fila .der{color:var(--gris);flex:none;font-variant-numeric:tabular-nums}
 
+/* ---------- Calendario de intensidad (relleno = duración del trabajo) ---------- */
+.int-dia{background:var(--panel);border-radius:8px;height:62px;position:relative;padding:4px 4px 0}
+.int-dia .n{font-size:10px;color:var(--gris);line-height:1;position:relative;z-index:2}
+.int-dia.vacio{background:transparent}
+.int-dia.hoy{outline:1.5px solid var(--verde)}
+.int-zona{position:absolute;left:3px;right:3px;top:17px;bottom:3px}
+.int-pila{position:absolute;left:0;right:0;bottom:0;border-radius:5px;overflow:hidden;display:flex;flex-direction:column}
+.int-pila div{width:100%}
+
 /* ---------- Ruleta del peaje ---------- */
 #velo-ruleta{z-index:140}
 .ruleta-valor{
@@ -465,6 +474,13 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <div id="hist-proyectos"></div>
       </div>
       <div id="hist-terminados"></div>
+
+      <div class="crd">
+        <h2><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg> Intensidad diaria</h2>
+        <p class="nota" style="margin-bottom:10px">El relleno de cada día refleja cuánto trabajaste (el día más cargado del mes llena la celda), apilado por proyecto. Toca un día para ver su detalle.</p>
+        <div class="cal-grid" id="int-grid"></div>
+        <p class="nota" id="int-max" style="margin-top:8px"></p>
+      </div>
     </section>
 
     <!-- ============ VISTA: AJUSTES ============ -->
@@ -519,7 +535,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v33 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v34 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -1672,6 +1688,42 @@ function renderHistorial(){
   // Repintar el detalle del día seleccionado (se conserva tras editar)
   renderCalDetalle();
 
+  // Calendario de intensidad: mismo mes, relleno proporcional a las horas
+  var maxDia = 0;
+  Object.keys(porDia).forEach(function(dd){
+    var total = 0;
+    Object.keys(porDia[dd]).forEach(function(id){ total += porDia[dd][id]; });
+    if (total > maxDia) maxDia = total;
+  });
+  var htmlInt = ['L','M','X','J','V','S','D'].map(function(dsem){
+    return '<div class="cal-sem">' + dsem + '</div>';
+  }).join('');
+  for (var hI = 0; hI < huecos; hI++) htmlInt += '<div class="int-dia vacio"></div>';
+  for (var dI = 1; dI <= diasMes; dI++){
+    var ddI = String(dI).padStart(2, '0');
+    var esHoyI = (prefijo + ddI) === claveHoy;
+    htmlInt += '<div class="int-dia' + (esHoyI ? ' hoy' : '') + '" data-fecha="' + prefijo + ddI + '"><span class="n">' + dI + '</span>';
+    var datosI = porDia[ddI];
+    if (datosI && maxDia > 0){
+      var totalI = 0;
+      var idsI = Object.keys(datosI);
+      idsI.forEach(function(id){ totalI += datosI[id]; });
+      idsI.sort(function(a, b){ return datosI[b] - datosI[a]; });
+      // Altura de la pila = proporción frente al día más cargado del mes;
+      // dentro, cada proyecto ocupa su parte con su color
+      htmlInt += '<div class="int-zona"><div class="int-pila" style="height:' +
+        Math.max(6, Math.round(totalI / maxDia * 100)) + '%">' +
+        idsI.map(function(id){
+          return '<div style="height:' + (datosI[id] / totalI * 100) + '%;background:' + colorDeProyecto(id) + '"></div>';
+        }).join('') + '</div></div>';
+    }
+    htmlInt += '</div>';
+  }
+  document.getElementById('int-grid').innerHTML = htmlInt;
+  document.getElementById('int-max').textContent = maxDia > 0
+    ? 'Relleno completo = ' + fmtHoras(maxDia) + ' (tu día más cargado del mes).'
+    : 'Sin horas registradas este mes.';
+
   // Tiempo por proyecto (histórico completo, de más a menos horas)
   var conHoras = estado.proyectos.filter(function(p){ return horasTotales(p) > 0; })
     .sort(function(a, b){ return horasTotales(b) - horasTotales(a); });
@@ -2795,6 +2847,15 @@ function conectarEventos(){
     if (e){ abrirEditarSesion(e.dataset.editarSes); return; }
     var b = ev.target.closest('[data-borrar-ses]');
     if (b){ borrarSesion(b.dataset.borrarSes); }
+  });
+
+  // Tocar un día en la intensidad abre el mismo detalle (y lo acerca)
+  document.getElementById('int-grid').addEventListener('click', function(ev){
+    var celda = ev.target.closest('.int-dia[data-fecha]');
+    if (!celda) return;
+    calDiaSel = celda.dataset.fecha;
+    renderCalDetalle();
+    document.getElementById('cal-detalle').scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 
   // Navegación de meses del calendario

@@ -373,6 +373,31 @@ function comprobar(nombre, cond){
   comprobar('UAM figura de fondo', /De fondo/.test(tarjetaUam));
   comprobar('Institucional va en rojos', /#e08585/.test((await pag.getAttribute('.proy[data-id="uam"]', 'style')) || ''));
 
+  // --- Calendario de intensidad diaria (Historial, abajo del todo) ---
+  // Estado actual: hoy hay 2h de UAM + 1h de Tesis Z
+  await pag.click('nav button[data-vista="historial"]');
+  await pag.waitForTimeout(300);
+  comprobar('Existe el calendario de intensidad', (await pag.locator('#int-grid .int-dia').count()) >= 28);
+  const hoyClaveInt = await pag.evaluate(() => {
+    const f = new Date();
+    return f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' + String(f.getDate()).padStart(2, '0');
+  });
+  const celdaHoy = pag.locator(`#int-grid .int-dia[data-fecha="${hoyClaveInt}"]`);
+  comprobar('La celda de hoy está resaltada', /hoy/.test((await celdaHoy.getAttribute('class')) || ''));
+  comprobar('La pila de hoy tiene dos segmentos (dos proyectos)', (await celdaHoy.locator('.int-pila div').count()) === 2);
+  const estiloPila = (await celdaHoy.locator('.int-pila').getAttribute('style')) || '';
+  comprobar('La pila de hoy llega al 100% (día más cargado del mes)', /height:\s*100%/.test(estiloPila));
+  const segmentosInt = await celdaHoy.locator('.int-pila div').evaluateAll(ds => ds.map(d => d.getAttribute('style') || ''));
+  comprobar('Los segmentos llevan los colores del proyecto (UAM rojo primero por más horas)',
+    /#e08585/.test(segmentosInt[0]) && /#8fb8d8/.test(segmentosInt[1]));
+  comprobar('La leyenda indica el día más cargado (3h)', /3h/.test((await pag.locator('#int-max').textContent()) || ''));
+  // Tocar un día abre el mismo detalle editable del calendario de arriba
+  await celdaHoy.click();
+  await pag.waitForTimeout(400);
+  comprobar('Tocar la celda abre el detalle del día', await pag.locator('#cal-detalle').isVisible());
+  const detalleInt = (await pag.locator('#cal-detalle').textContent()) || '';
+  comprobar('El detalle muestra las sesiones de hoy', /UAM/.test(detalleInt) && /Tesis Z/.test(detalleInt));
+
   comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
   if (erroresJS.length) console.log('Errores:', erroresJS);
 
