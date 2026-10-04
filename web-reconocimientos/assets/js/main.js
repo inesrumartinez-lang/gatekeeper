@@ -21,12 +21,15 @@
   };
 
   const nf = window.Intl && Intl.NumberFormat ? new Intl.NumberFormat('es-ES') : null;
-  /* Norma RAE: sin separador hasta 9999 y espacio fino a partir de 10 000 */
+  /* Norma RAE: sin separador hasta 9999 y espacio de no separación a partir de 10 000 */
   const fmt = (n) => {
     const s = nf ? nf.format(n) : String(n);
     return Math.abs(n) >= 10000 ? s.replace(/\./g, ' ') : s.replace(/\./g, '');
   };
-  const formatDays = (n) => (n < 0 ? '−' + fmt(-n) : fmt(n));
+  const formatDays = (n) => {
+    n = n || 0; /* evita «-0» al redondear valores negativos próximos a cero */
+    return n < 0 ? '−' + fmt(-n) : fmt(n);
+  };
 
   const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   let reduce = motionQuery.matches;
@@ -158,6 +161,7 @@
   let menuOpen = false;
   let lastTone = '';
   let scrolled = null;
+  let closeTimer = 0;
 
   const setHeaderHidden = (hide) => {
     if (hide === headerHidden) return;
@@ -230,6 +234,7 @@
   const outside = [$('main'), $('footer'), $('.skip-link')].filter(Boolean);
 
   function openMenu() {
+    window.clearTimeout(closeTimer);
     menuOpen = true;
     menu.hidden = false;
     menuBtn.setAttribute('aria-expanded', 'true');
@@ -258,10 +263,11 @@
     menuBtn.setAttribute('aria-label', 'Abrir menú');
     $('.menu-btn__label', menuBtn).textContent = 'Menú';
     if (returnFocus) menuBtn.focus({ preventScroll: true });
-    window.setTimeout(() => {
+    closeTimer = window.setTimeout(() => {
+      if (menuOpen) return;
       root.classList.remove('menu-open');
       outside.forEach((el) => { el.inert = false; });
-      if (!menuOpen) menu.hidden = true;
+      menu.hidden = true;
       lastTone = null;
       requestTick();
     }, reduce ? 0 : 320);
@@ -373,7 +379,7 @@
     'Vigente': 'ok',
     'Disponibilidad pedida': 'warn',
     'Cita pedida': 'warn',
-    'Cita reservada': 'ok',
+    'Cita reservada': 'warn',
     'Recordatorio enviado': 'warn',
     'Asistencia confirmada': 'ok',
     'Certificado recibido': 'ok'
@@ -433,49 +439,48 @@
     let run = 0;
     let playing = false;
     let started = false;
-    let heroVisible = true;
+    let heroVisible = false;
 
     const showLine = (i) => { if (lines[i]) lines[i].classList.add('is-on'); };
     const finalState = () => {
       run++;
       playing = false;
+      dialEl.classList.remove('is-renew');
       dial.set(365, 'Vigente');
       lines.forEach((l) => l.classList.add('is-on'));
       replay.removeAttribute('aria-disabled');
     };
 
+    /* Cada hito se enciende al llegar a su día, no al salir del anterior */
     async function play() {
       if (playing) return;
       const id = ++run;
       const cancelled = () => id !== run;
+      const leg = async (from, to, ms, ease, label, line, next) => {
+        await tween(from, to, ms, ease, (v) => dial.set(v, label), cancelled);
+        if (cancelled()) return false;
+        dial.set(to, next);
+        if (line !== null) showLine(line);
+        return true;
+      };
       playing = true;
       replay.setAttribute('aria-disabled', 'true');
+      dialEl.classList.remove('is-renew', 'dial--flash');
       lines.forEach((l) => l.classList.remove('is-on'));
       dial.set(365, 'Vigente');
       await wait(250);
       if (cancelled()) return;
-      await tween(365, 55, 1000, easeInOut, (v) => dial.set(v, 'Vigente'), cancelled);
-      if (cancelled()) return;
-      dial.set(55, 'Disponibilidad pedida');
-      showLine(0);
+      if (!await leg(365, 55, 1000, easeInOut, 'Vigente', 0, 'Disponibilidad pedida')) return;
       await wait(380);
       if (cancelled()) return;
-      showLine(1);
-      await tween(55, 48, 280, easeOut, (v) => dial.set(v, 'Cita pedida'), cancelled);
-      if (cancelled()) return;
-      showLine(2);
-      await tween(48, 45, 260, easeOut, (v) => dial.set(v, 'Cita reservada'), cancelled);
-      if (cancelled()) return;
-      showLine(3);
-      await tween(45, 25, 480, easeInOut, (v) => dial.set(v, 'Recordatorio enviado'), cancelled);
-      if (cancelled()) return;
-      showLine(4);
-      await tween(25, 24, 220, easeOut, (v) => dial.set(v, 'Asistencia confirmada'), cancelled);
-      if (cancelled()) return;
-      showLine(5);
-      await tween(24, 17, 260, easeOut, (v) => dial.set(v, 'Certificado recibido'), cancelled);
-      if (cancelled()) return;
-      dialEl.classList.remove('dial--flash');
+      if (!await leg(55, 48, 280, easeOut, 'Disponibilidad pedida', 1, 'Cita pedida')) return;
+      if (!await leg(48, 45, 260, easeOut, 'Cita pedida', 2, 'Cita reservada')) return;
+      if (!await leg(45, 28, 380, easeInOut, 'Cita reservada', 3, 'Recordatorio enviado')) return;
+      if (!await leg(28, 25, 180, easeOut, 'Recordatorio enviado', null, 'Recordatorio enviado')) return;
+      if (!await leg(25, 24, 160, easeOut, 'Recordatorio enviado', 4, 'Asistencia confirmada')) return;
+      if (!await leg(24, 17, 260, easeOut, 'Asistencia confirmada', 5, 'Certificado recibido')) return;
+      /* Vuelta a 365: el color pasa a «vigente» sin transiciones intermedias */
+      dialEl.classList.add('is-renew');
       void dialEl.offsetWidth;
       dialEl.classList.add('dial--flash');
       await tween(17, 365, 850, easeOut, (v) => dial.set(v, v > 300 ? 'Vigente' : 'Certificado recibido'), cancelled);
@@ -499,12 +504,12 @@
     }
     const begin = () => {
       if ('IntersectionObserver' in window) {
+        /* El ciclo empieza cuando el dial se ve (en móvil está bajo el texto) */
         new IntersectionObserver((entries) => {
-          heroVisible = entries.some((e) => e.isIntersecting);
+          heroVisible = entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.6);
           if (heroVisible && !started && document.visibilityState === 'visible') start();
-          if (!heroVisible && playing) finalState();
-          if (!heroVisible && !started) { started = true; finalState(); }
-        }, { threshold: 0.3 }).observe(hero);
+          if (!entries.some((e) => e.isIntersecting) && playing) finalState();
+        }, { threshold: [0, 0.6] }).observe(dialEl);
       } else {
         start();
       }
@@ -533,10 +538,12 @@
     ticker.classList.add('is-ready');
     const vis = watchVisibility(ticker);
     let top = 0;
+    let tickerH = 1;
     const widths = rows.map(() => 0);
     const current = rows.map(() => null);
     onMeasureFns.push(() => {
       top = absTop(ticker);
+      tickerH = ticker.offsetHeight;
       rows.forEach((row, i) => { widths[i] = row.scrollWidth; });
     });
     onScrollFns.push((y, dt) => {
@@ -549,7 +556,7 @@
       let again = false;
       rows.forEach((row, i) => {
         const dir = Number(row.dataset.ticker) || -1;
-        const progress = clamp((y + vh - top) / (vh + ticker.offsetHeight), 0, 1);
+        const progress = clamp((y + vh - top) / (vh + tickerH), 0, 1);
         const target = dir < 0 ? -0.16 * widths[i] * progress : -0.3 * widths[i] + 0.16 * widths[i] * progress;
         current[i] = current[i] === null ? target : approach(current[i], target, dt, 90);
         row.style.transform = `translateX(${current[i].toFixed(1)}px)`;
@@ -578,7 +585,7 @@
         const box = boxes[i];
         if (!box) return;
         const center = box[0] + box[1] / 2 - y;
-        const p = reduce ? 0 : clamp((vh * 0.66 - center) / (vh * 0.24), 0, 1);
+        const p = reduce ? 1 : clamp((vh * 0.66 - center) / (vh * 0.24), 0, 1);
         if (Math.abs(p - lastP[i]) < 0.002) return;
         lastP[i] = p;
         const span = el.querySelector('.pain__text > span');
@@ -629,7 +636,7 @@
     const fill = $('[data-steps-fill]', process);
     const list = $('.steps', process);
     const dots = $$('[data-goto]', process);
-    const pinQuery = window.matchMedia('(min-width: 1000px) and (min-height: 620px) and (max-height: 2999px)');
+    const pinQuery = window.matchMedia('(min-width: 1000px) and (min-height: 720px) and (max-height: 2999px)');
 
     const frag = document.createDocumentFragment();
     for (let i = 0; i <= 90; i++) frag.appendChild(document.createElement('i'));
@@ -755,7 +762,7 @@
         result.classList.toggle('is-yes', yes);
         result.classList.toggle('is-no', !yes);
         result.textContent = yes
-          ? 'Anotado. En siete días pedimos el certificado de aptitud.'
+          ? 'Anotado. Dentro de una semana pediremos tu certificado de aptitud.'
           : 'Entendido. Volvemos a pedir tu disponibilidad y gestionamos una cita nueva.';
       });
     });
@@ -927,8 +934,11 @@
     const submit = $('[data-submit]', form);
     const submitLabel = $('[data-submit-label]', form);
     const area = $('[data-done-area]', done);
-    const idleLabel = CONFIG.endpoint ? 'Enviar solicitud' : 'Preparar mi solicitud';
+    const idleLabel = CONFIG.endpoint ? 'Enviar solicitud' : 'Preparar el correo';
     submitLabel.textContent = idleLabel;
+    /* Sin servicio de formularios, se avisa antes de que la solicitud se envíe por correo */
+    const mailHint = $('[data-mail-hint]', form);
+    if (mailHint) mailHint.hidden = !!CONFIG.endpoint;
     let attempted = false;
     let lastRequest = '';
 
@@ -974,18 +984,24 @@
       el.addEventListener('change', () => { if (attempted || isCheck) validateField(el); });
     });
 
+    /* Sustituye mitades sueltas de pares sustitutos, que encodeURIComponent no admite */
+    const wellFormed = (v) => (typeof v.toWellFormed === 'function'
+      ? v.toWellFormed()
+      : v.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/g, (m, pre) => (pre === undefined ? '\uFFFD' : pre + '\uFFFD')));
+    const field = (name) => wellFormed(form.elements[name].value.trim());
     const data = () => ({
-      nombre: form.elements.nombre.value.trim(),
-      empresa: form.elements.empresa.value.trim(),
+      nombre: field('nombre'),
+      empresa: field('empresa'),
       trabajadores: String(parseCount(form.elements.trabajadores.value)),
-      email: form.elements.email.value.trim(),
-      telefono: form.elements.telefono.value.trim(),
-      servicio_prevencion: form.elements.servicio_prevencion.value.trim(),
-      mensaje: form.elements.mensaje.value.trim()
+      email: field('email'),
+      telefono: field('telefono'),
+      servicio_prevencion: field('servicio_prevencion'),
+      mensaje: field('mensaje')
     });
 
     const composeText = (d, maxMessage) => {
-      const msg = maxMessage && d.mensaje.length > maxMessage ? d.mensaje.slice(0, maxMessage) + '…' : d.mensaje;
+      const chars = Array.from(d.mensaje);
+      const msg = maxMessage && chars.length > maxMessage ? chars.slice(0, maxMessage).join('') + '…' : d.mensaje;
       return [
         `Nombre: ${d.nombre}`,
         `Empresa: ${d.empresa}`,

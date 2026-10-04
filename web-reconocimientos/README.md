@@ -27,8 +27,9 @@ Busca y reemplaza en toda la carpeta para no dejarte ninguno. Tras publicar, com
 
 La web promete que tratas los datos de los trabajadores de tus clientes como encargado del tratamiento. Antes de empezar con el primer cliente:
 
-- Firma con cada cliente un contrato de encargo del tratamiento (artículo 28 del RGPD) que cubra datos identificativos y de contacto, disponibilidad, citas y la conclusión de aptitud.
-- Lleva el registro de actividades de tratamiento como encargado (artículo 30.2 del RGPD).
+- Firma con cada cliente un contrato de encargo del tratamiento (artículo 28 del RGPD) que cubra datos identificativos y de contacto, disponibilidad, citas y asistencia, renuncias comunicadas y la conclusión de aptitud.
+- Lleva el registro de actividades de tratamiento como encargado (artículo 30.2 del RGPD) y también como responsable de tus propios tratamientos (artículo 30.1): la exención del artículo 30.5 no se aplica cuando hay datos de salud.
+- Pide a cada cliente autorización para los subencargados que uses (correo, almacenamiento) y firma con ellos las mismas obligaciones (artículo 28, apartados 2 y 4, del RGPD).
 - Aplica medidas de seguridad acordes con un dato de salud (artículo 32 del RGPD): acceso restringido, cifrado y doble factor en el correo y en el Excel compartido.
 - Valora con un asesor si necesitas una evaluación de impacto o un delegado de protección de datos según tu volumen.
 - Si algún proveedor (correo, almacenamiento) está fuera del Espacio Económico Europeo, comprueba que ofrece garantías válidas para la transferencia y guarda una copia: la política de privacidad ofrece enviarla.
@@ -55,6 +56,8 @@ Si cambias el script en línea del `<head>` de `index.html`, recalcula su hash p
 ```bash
 python3 -c "import hashlib,base64,re;s=open('index.html',encoding='utf-8').read();m=re.search(r'<script>(.*?)</script>',s,re.S).group(1);print(base64.b64encode(hashlib.sha256(m.encode()).digest()).decode())"
 ```
+
+Las fuentes se sirven con caché de un año (`immutable`) porque llevan la versión en el nombre (`seniar-sans.v3.woff2`). Si cambias una fuente, sube la versión del archivo y de todas sus referencias (`index.html`, páginas legales, `404.html` y `assets/css/main.css`).
 
 ## Estructura
 
