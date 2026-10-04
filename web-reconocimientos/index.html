@@ -188,7 +188,7 @@
         <a class="btn btn--line btn--lg" href="#como-funciona"><span>Ver cómo funciona</span><svg class="btn__trail" aria-hidden="true"><use href="#i-arrow-down"/></svg></a>
       </div>
       <ul class="hero__proof" role="list">
-        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Sin acceso a historiales clínicos</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Sin acceso a historiales&nbsp;clínicos</li>
         <li><svg aria-hidden="true"><use href="#i-check"/></svg>Con tu servicio de prevención actual</li>
         <li><svg aria-hidden="true"><use href="#i-check"/></svg>Pequeñas, medianas y grandes empresas</li>
       </ul>
@@ -599,7 +599,7 @@
     <div class="wrap">
       <header class="section-head section-head--stack">
         <p class="eyebrow" data-reveal>Ventajas</p>
-        <h2 class="h2" id="reasons-title" data-split>¿Por qué externalizar la gestión de tus reconocimientos&nbsp;médicos?</h2>
+        <h2 class="h2" id="reasons-title" data-split>¿Qué ganas al externalizar los reconocimientos?</h2>
         <p class="lead" data-reveal>Menos correos para ti y más reconocimientos a tiempo, sin cambiar de servicio de prevención.</p>
       </header>
 
@@ -617,11 +617,11 @@
         <li class="cell cell--b" data-reveal data-anim>
           <div class="cell__visual" aria-hidden="true">
             <div class="chain">
-              <span class="chain__node">Tu empresa</span>
+              <span class="chain__node">Tu empresa</span><span class="chain__note">Nos pasa el listado</span>
               <span class="chain__link"></span>
-              <span class="chain__node chain__node--main"><svg><use href="#i-mark"/></svg>Seniar</span>
+              <span class="chain__node chain__node--main"><svg><use href="#i-mark"/></svg>Seniar</span><span class="chain__note">Coordina, avisa y registra</span>
               <span class="chain__link"></span>
-              <span class="chain__node">Tu servicio de prevención</span>
+              <span class="chain__node">Tu servicio de prevención</span><span class="chain__note">Hace el reconocimiento</span>
             </div>
           </div>
           <div class="cell__copy">
@@ -718,7 +718,7 @@
     <div class="wrap faq__grid">
       <header class="faq__head">
         <p class="eyebrow" data-reveal>Preguntas frecuentes</p>
-        <h2 class="h2" id="faq-title" data-split>Lo que suelen preguntarnos sobre los reconocimientos&nbsp;médicos.</h2>
+        <h2 class="h2" id="faq-title" data-split>Lo que suelen preguntarnos.</h2>
         <p class="faq__more" data-reveal>¿Tienes otra duda? <a href="#solicitud">Escríbenos</a> y te respondemos.</p>
       </header>
       <div class="faq__list" data-reveal>
@@ -843,11 +843,11 @@
             <p class="field__error" id="e-privacidad" hidden></p>
           </div>
           <p class="form__legal"><b>Responsable:</b> <span class="ph">[Nombre y apellidos o razón social]</span> (Seniar). <b>Finalidad:</b> responder a tu solicitud y enviarte una propuesta. <b>Legitimación:</b> interés legítimo en atender la solicitud de tu empresa (art.&nbsp;6.1.f RGPD) o, si eres autónomo, medidas precontractuales a petición tuya (art.&nbsp;6.1.b RGPD). <b>Destinatarios:</b> no cedemos tus datos salvo obligación legal; nuestros proveedores tecnológicos los tratan por nuestra cuenta. <b>Derechos:</b> acceso, rectificación, supresión, oposición y los demás que explica la <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad<span class="visually-hidden">, se abre en una pestaña nueva</span></a>.</p>
+          <p class="form__mail-hint" id="h-envio" data-mail-hint hidden>Al pulsar, te preparamos un correo con tu solicitud para que lo envíes desde tu programa de correo. También podrás copiarla.</p>
           <div class="form__actions">
             <button class="btn btn--solid btn--lg form__submit" type="submit" data-submit><span data-submit-label>Enviar solicitud</span><span class="btn__icon" aria-hidden="true"><svg><use href="#i-arrow"/></svg><svg><use href="#i-arrow"/></svg></span></button>
             <p class="form__status" role="status" aria-live="polite" data-form-status></p>
           </div>
-          <p class="form__mail-hint" data-mail-hint hidden>Al pulsar, te preparamos un correo con tu solicitud para que lo envíes desde tu programa de correo. También podrás copiarla.</p>
           <p class="form__scope">El alcance, los plazos y los niveles de servicio se concretan en la propuesta y en el contrato.</p>
         </form>
 
@@ -859,6 +859,7 @@
             <a class="btn btn--solid btn--lg" href="mailto:hola@seniar.es" data-done-mailto><span>Abrir mi correo</span><span class="btn__icon" aria-hidden="true"><svg><use href="#i-arrow"/></svg><svg><use href="#i-arrow"/></svg></span></a>
             <button class="btn btn--line btn--lg" type="button" data-done-copy><svg class="btn__lead" aria-hidden="true"><use href="#i-copy"/></svg><span data-done-copy-label>Copiar solicitud</span></button>
             <p class="form-done__hint">Envíala a <b>hola@seniar.es</b>.</p>
+            <p class="form-done__hint" data-done-trunc hidden>Tu mensaje es largo, así que en el correo va recortado. Si quieres enviarlo entero, usa «Copiar solicitud».</p>
             <label class="visually-hidden" for="done-text">Texto de tu solicitud</label>
             <textarea class="form-done__text-area" id="done-text" readonly rows="7" data-done-area hidden></textarea>
           </div>

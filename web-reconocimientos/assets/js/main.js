@@ -244,6 +244,7 @@
     lastTone = 'night';
     setHeaderHidden(false);
     window.requestAnimationFrame(() => {
+      if (!menuOpen) return;
       menu.classList.add('is-open');
       /* Lo costoso (inert, bloqueo de scroll y foco) va después del primer pintado */
       window.setTimeout(() => {
@@ -507,6 +508,7 @@
         /* El ciclo empieza cuando el dial se ve (en móvil está bajo el texto) */
         new IntersectionObserver((entries) => {
           heroVisible = entries.some((e) => e.isIntersecting && e.intersectionRatio >= 0.6);
+          if (heroVisible && !started && hero.contains(document.activeElement)) { started = true; finalState(); }
           if (heroVisible && !started && document.visibilityState === 'visible') start();
           if (!entries.some((e) => e.isIntersecting) && playing) finalState();
         }, { threshold: [0, 0.6] }).observe(dialEl);
@@ -669,8 +671,8 @@
 
     onMeasureFns.push(() => {
       if (pinned) {
-        stepPx = Math.round(vh * 0.34);
-        scene.style.setProperty('--scene-h', `${steps.length * stepPx + vh}px`);
+        stepPx = vh * 0.34; /* igual que calc(9 * 34vh + 100vh) en CSS */
+        scene.style.setProperty('--scene-h', `${(steps.length * stepPx + vh).toFixed(2)}px`);
       }
       sceneTop = absTop(scene);
       tops = steps.map(absTop);
@@ -938,7 +940,10 @@
     submitLabel.textContent = idleLabel;
     /* Sin servicio de formularios, se avisa antes de que la solicitud se envíe por correo */
     const mailHint = $('[data-mail-hint]', form);
-    if (mailHint) mailHint.hidden = !!CONFIG.endpoint;
+    if (mailHint) {
+      mailHint.hidden = !!CONFIG.endpoint;
+      if (!CONFIG.endpoint) submit.setAttribute('aria-describedby', mailHint.id);
+    }
     let attempted = false;
     let lastRequest = '';
 
@@ -987,7 +992,11 @@
     /* Sustituye mitades sueltas de pares sustitutos, que encodeURIComponent no admite */
     const wellFormed = (v) => (typeof v.toWellFormed === 'function'
       ? v.toWellFormed()
-      : v.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/g, (m, pre) => (pre === undefined ? '\uFFFD' : pre + '\uFFFD')));
+      : v.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g, (m) => (m.length === 2 ? m : '\uFFFD')));
+    /* Caracteres tal como se ven (emojis compuestos y banderas incluidos) */
+    const graphemes = (v) => (window.Intl && Intl.Segmenter
+      ? Array.from(new Intl.Segmenter('es', { granularity: 'grapheme' }).segment(v), (x) => x.segment)
+      : Array.from(v));
     const field = (name) => wellFormed(form.elements[name].value.trim());
     const data = () => ({
       nombre: field('nombre'),
@@ -1000,7 +1009,7 @@
     });
 
     const composeText = (d, maxMessage) => {
-      const chars = Array.from(d.mensaje);
+      const chars = graphemes(d.mensaje);
       const msg = maxMessage && chars.length > maxMessage ? chars.slice(0, maxMessage).join('') + '…' : d.mensaje;
       return [
         `Nombre: ${d.nombre}`,
@@ -1027,9 +1036,14 @@
         title.textContent = `Último paso, ${firstName}: envíanos la solicitud por correo.`;
         text.textContent = 'Pulsa el botón para abrirla en tu programa de correo, ya redactada, o cópiala y envíala tú.';
         const subject = `Solicitud de propuesta · ${d.empresa}`;
-        lastRequest = composeText(d);
+        lastRequest = `Para: ${CONFIG.email}\nAsunto: ${subject}\n\n${composeText(d)}`;
+        $('[data-done-trunc]', done).hidden = graphemes(d.mensaje).length <= 600;
         /* Algunos clientes de correo fallan con enlaces mailto muy largos */
-        $('[data-done-mailto]', done).href = `mailto:${CONFIG.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(composeText(d, 600))}`;
+        let href = `mailto:${CONFIG.email}`;
+        try {
+          href += `?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(composeText(d, 600))}`;
+        } catch (err) { /* sin cuerpo: la solicitud sigue disponible con «Copiar solicitud» */ }
+        $('[data-done-mailto]', done).href = href;
         area.value = lastRequest;
         mailBox.hidden = false;
       }
@@ -1166,6 +1180,24 @@
   /* Año en el pie */
   $$('[data-year]').forEach((el) => { el.textContent = String(new Date().getFullYear()); });
 
+  /* Una URL con ancla (#solicitud…) se vuelve a situar tras la primera medición, salvo
+     que la persona ya se haya movido por la página */
+  let userMoved = false;
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach((type) => {
+    window.addEventListener(type, () => { userMoved = true; }, { once: true, passive: true });
+  });
+  const navEntry = window.performance && performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+  /* Al volver atrás o recargar, el navegador restaura la posición: no se toca */
+  const restoring = !!navEntry && (navEntry.type === 'back_forward' || navEntry.type === 'reload');
+  const settleHash = () => {
+    if (restoring || userMoved || !window.location.hash) return;
+    let target = null;
+    try { target = document.getElementById(decodeURIComponent(window.location.hash.slice(1))); } catch (err) { return; }
+    if (target) target.scrollIntoView({ behavior: 'instant', block: 'start' });
+  };
+
   window.__seniar = true;
-  window.requestAnimationFrame(measureAll);
+  measureAll();
+  window.requestAnimationFrame(() => { measureAll(); settleHash(); });
+  window.addEventListener('load', () => window.setTimeout(settleHash, 0), { once: true });
 })();
