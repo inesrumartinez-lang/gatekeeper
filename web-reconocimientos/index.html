@@ -234,6 +234,7 @@
             <li data-line="4"><span class="readout__day">24</span><span class="readout__text">Asistencia confirmada</span></li>
             <li data-line="5"><span class="readout__day">17</span><span class="readout__text">Certificado archivado · vuelta a 365</span></li>
           </ol>
+          <p class="readout__legend" aria-hidden="true"><i></i>Ventana de gestión: últimos 55 días</p>
         </div>
         <figcaption class="visually-hidden" id="hero-fig">Ejemplo de un ciclo: el contador de un reconocimiento médico baja hasta 55 días, se piden la disponibilidad y la cita, se envían los recordatorios, se confirma la asistencia, se archiva el certificado y el contador vuelve a 365 días.</figcaption>
       </figure>
@@ -300,7 +301,7 @@
       <header class="section-head section-head--split">
         <div>
           <p class="eyebrow" data-reveal>Cómo funciona</p>
-          <h2 class="h2" id="process-title" data-split>Así gestionamos cada reconocimiento médico, de principio a&nbsp;fin.</h2>
+          <h2 class="h2" id="process-title" data-split>Así gestionamos cada reconocimiento médico, de&nbsp;principio a&nbsp;fin.</h2>
         </div>
         <p class="lead" data-reveal>Nueve pasos, trabajador a trabajador. Tú eliges a quién pedimos la disponibilidad: al supervisor o directamente al trabajador.</p>
       </header>
@@ -796,7 +797,8 @@
         </div>
       </div>
 
-      <div class="form-card" id="solicitud" data-tone="paper" data-reveal>
+      <div class="form-slot" id="solicitud">
+      <div class="form-card" data-tone="paper" data-reveal>
         <form class="form" id="form-contacto" action="mailto:hola@seniar.es" method="post" enctype="text/plain" data-form data-endpoint="">
           <h3 class="form__title">Pide tu propuesta</h3>
           <div class="field">
@@ -856,15 +858,16 @@
           <h3 class="form-done__title" tabindex="-1" data-done-title>Gracias. Hemos recibido tu solicitud.</h3>
           <p class="form-done__text" data-done-text>Te escribiremos muy pronto para conocer tu plantilla.</p>
           <div class="form-done__mail" data-done-mail hidden>
+            <p class="form-done__hint" id="h-recorte" data-done-trunc hidden>Tu mensaje es largo, así que en el correo va recortado. Si quieres enviarlo entero, usa «Copiar solicitud».</p>
             <a class="btn btn--solid btn--lg" href="mailto:hola@seniar.es" data-done-mailto><span>Abrir mi correo</span><span class="btn__icon" aria-hidden="true"><svg><use href="#i-arrow"/></svg><svg><use href="#i-arrow"/></svg></span></a>
             <button class="btn btn--line btn--lg" type="button" data-done-copy><svg class="btn__lead" aria-hidden="true"><use href="#i-copy"/></svg><span data-done-copy-label>Copiar solicitud</span></button>
             <p class="form-done__hint">Envíala a <b>hola@seniar.es</b>.</p>
-            <p class="form-done__hint" data-done-trunc hidden>Tu mensaje es largo, así que en el correo va recortado. Si quieres enviarlo entero, usa «Copiar solicitud».</p>
             <label class="visually-hidden" for="done-text">Texto de tu solicitud</label>
             <textarea class="form-done__text-area" id="done-text" readonly rows="7" data-done-area hidden></textarea>
           </div>
           <button class="link-btn" type="button" data-done-back>Volver al formulario</button>
         </div>
+      </div>
       </div>
     </div>
   </section>

@@ -672,6 +672,7 @@
     onMeasureFns.push(() => {
       if (pinned) {
         stepPx = vh * 0.34; /* igual que calc(9 * 34vh + 100vh) en CSS */
+        /* Mismo cálculo que el respaldo CSS (--steps en main.css) */
         scene.style.setProperty('--scene-h', `${(steps.length * stepPx + vh).toFixed(2)}px`);
       }
       sceneTop = absTop(scene);
@@ -930,6 +931,11 @@
      ------------------------------------------------------------------ */
   if (form) {
     form.noValidate = true;
+    /* Un campo enfocado que asoma por abajo se muestra entero */
+    form.addEventListener('focusin', (e) => {
+      const r = e.target.getBoundingClientRect();
+      if (r.bottom > window.innerHeight) e.target.scrollIntoView({ block: 'nearest' });
+    });
     const card = form.closest('.form-card');
     const done = $('[data-form-done]', card);
     const statusEl = $('[data-form-status]', form);
@@ -998,6 +1004,16 @@
       ? Array.from(new Intl.Segmenter('es', { granularity: 'grapheme' }).segment(v), (x) => x.segment)
       : Array.from(v));
     const field = (name) => wellFormed(form.elements[name].value.trim());
+    /* Corta sin partir caracteres y sin pasar de max unidades de texto */
+    const clip = (text, max) => {
+      if (text.length <= max) return text;
+      let out = '';
+      for (const g of graphemes(text)) {
+        if (out.length + g.length > max) break;
+        out += g;
+      }
+      return out + '…';
+    };
     const data = () => ({
       nombre: field('nombre'),
       empresa: field('empresa'),
@@ -1009,8 +1025,7 @@
     });
 
     const composeText = (d, maxMessage) => {
-      const chars = graphemes(d.mensaje);
-      const msg = maxMessage && chars.length > maxMessage ? chars.slice(0, maxMessage).join('') + '…' : d.mensaje;
+      const msg = maxMessage ? clip(d.mensaje, maxMessage) : d.mensaje;
       return [
         `Nombre: ${d.nombre}`,
         `Empresa: ${d.empresa}`,
@@ -1037,7 +1052,10 @@
         text.textContent = 'Pulsa el botón para abrirla en tu programa de correo, ya redactada, o cópiala y envíala tú.';
         const subject = `Solicitud de propuesta · ${d.empresa}`;
         lastRequest = `Para: ${CONFIG.email}\nAsunto: ${subject}\n\n${composeText(d)}`;
-        $('[data-done-trunc]', done).hidden = graphemes(d.mensaje).length <= 600;
+        const trunc = $('[data-done-trunc]', done);
+        trunc.hidden = d.mensaje.length <= 600;
+        if (trunc.hidden) $('[data-done-mailto]', done).removeAttribute('aria-describedby');
+        else $('[data-done-mailto]', done).setAttribute('aria-describedby', trunc.id);
         /* Algunos clientes de correo fallan con enlaces mailto muy largos */
         let href = `mailto:${CONFIG.email}`;
         try {
