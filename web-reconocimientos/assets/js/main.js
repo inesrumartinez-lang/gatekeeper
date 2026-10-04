@@ -782,6 +782,19 @@
     const ref = $('[data-sheet-ref]', sheet);
     const expr = $('[data-sheet-expr]', sheet);
     const scroller = $('.sheet__scroll', sheet);
+    const syncRegion = () => {
+      const scrolls = scroller.scrollWidth > scroller.clientWidth;
+      if (scrolls) {
+        scroller.tabIndex = 0;
+        scroller.setAttribute('role', 'region');
+        scroller.setAttribute('aria-label', 'Registro de ejemplo, desplazable en horizontal');
+      } else {
+        scroller.removeAttribute('tabindex');
+        scroller.removeAttribute('role');
+        scroller.removeAttribute('aria-label');
+      }
+    };
+    onMeasureFns.push(syncRegion);
     const plural = (n) => (n === 1 ? '1 trabajador' : `${n} trabajadores`);
 
     filters.forEach((btn) => {
@@ -797,6 +810,7 @@
           if (show) visible++;
         });
         status.textContent = `Mostrando ${plural(visible)}`;
+        syncRegion();
       });
     });
 
@@ -820,6 +834,7 @@
         $('[data-live-state]', live).classList.add('is-selected');
         ref.textContent = 'G7';
         expr.textContent = 'Cita reservada';
+        syncRegion();
       }, reduce ? 0 : 1900);
     };
     if (sheet.classList.contains('is-in')) countUp();
@@ -855,7 +870,9 @@
     const stepFor = (n) => (n < 100 ? 5 : n < 1000 ? 10 : 50);
     const toN = (v) => snap(MIN * Math.pow(MAX / MIN, v / 1000));
     const toV = (n) => Math.round((1000 * Math.log(clamp(n, MIN, MAX) / MIN)) / Math.log(MAX / MIN));
-    const shownVals = { year: 250, month: 21, comms: 1750, week: 34 };
+    const shownVals = { year: 250, month: 250 / 12, comms: 1750, week: 1750 / 52 };
+    /* Una media por debajo de 1 se muestra como «<1» en lugar de redondearla a 1 */
+    const showAvg = (v) => (v > 0 && v < 1 ? '<1' : fmt(Math.round(v)));
     const calcStatus = $('[data-calc-status]', calc);
     const calcTip = $('[data-calc-tip]', calc);
     let anim = 0;
@@ -864,12 +881,7 @@
     const update = (n, source) => {
       n = clamp(Math.round(n), 1, LIMIT);
       calcValue = n;
-      const targets = {
-        year: n,
-        month: Math.max(1, Math.round(n / 12)),
-        comms: n * 7,
-        week: Math.max(1, Math.round((n * 7) / 52))
-      };
+      const targets = { year: n, month: n / 12, comms: n * 7, week: (n * 7) / 52 };
       if (source !== 'range') range.value = String(toV(n));
       range.style.setProperty('--fill', (Number(range.value) / 10).toFixed(1) + '%');
       range.setAttribute('aria-valuetext', `${fmt(n)} ${n === 1 ? 'trabajador' : 'trabajadores'}`);
@@ -879,16 +891,17 @@
         window.clearTimeout(statusTimer);
         statusTimer = window.setTimeout(() => {
           const t = targets;
-          calcStatus.textContent = `Con ${fmt(n)} ${n === 1 ? 'trabajador' : 'trabajadores'}: ${fmt(t.year)} ${t.year === 1 ? 'reconocimiento' : 'reconocimientos'} al año, ${fmt(t.month)} ${t.month === 1 ? 'cita' : 'citas'} al mes de media y ${fmt(t.comms)} correos y avisos al año.`;
+          const month = t.month < 1 ? 'menos de una cita' : `${fmt(Math.round(t.month))} ${Math.round(t.month) === 1 ? 'cita' : 'citas'}`;
+          calcStatus.textContent = `Con ${fmt(n)} ${n === 1 ? 'trabajador' : 'trabajadores'}: ${fmt(t.year)} ${t.year === 1 ? 'reconocimiento' : 'reconocimientos'} al año, ${month} al mes de media y ${fmt(t.comms)} correos y avisos al año.`;
         }, 700);
       }
       const id = ++anim;
       const from = { ...shownVals };
       tween(0, 1, 380, easeOut, (t) => {
         Object.keys(targets).forEach((k) => {
-          const v = Math.round(lerp(from[k], targets[k], t));
+          const v = lerp(from[k], targets[k], t);
           shownVals[k] = v;
-          outs[k].textContent = fmt(v);
+          outs[k].textContent = showAvg(v);
         });
       }, () => id !== anim);
     };

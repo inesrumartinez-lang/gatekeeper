@@ -14,7 +14,7 @@ python3 -m http.server 8080
 
 | Qué | Dónde |
 | --- | --- |
-| Email de contacto `hola@seniar.es` (provisional) | `index.html`, `assets/js/main.js` (`CONFIG.email`), páginas legales, `404.html` |
+| Email de contacto `hola@seniar.es` (provisional) | `index.html`, `assets/js/main.js` (`CONFIG.email`) y páginas legales |
 | Dominio `https://www.seniar.es` (provisional) | `index.html` (canonical, Open Graph y JSON-LD), páginas legales (canonical), `robots.txt`, `sitemap.xml` |
 | Datos del titular: nombre o razón social, NIF, domicilio, teléfono y datos registrales | `aviso-legal.html`, `privacidad.html` y la primera capa del formulario en `index.html` (marcados en amarillo con la clase `ph`) |
 | Proveedores de alojamiento, correo y formulario, con su país y garantías, y el plazo de conservación de los registros de conexión | `privacidad.html` (si no usas un servicio de formularios, borra esa línea de la lista) |
@@ -38,7 +38,7 @@ La web promete que tratas los datos de los trabajadores de tus clientes como enc
 
 Sin configurar, el formulario valida los datos y prepara un correo con la solicitud para que el visitante lo envíe desde su programa de correo (o lo copie). Sin JavaScript, abre el programa de correo con los datos.
 
-Para recibir las solicitudes directamente, pon la URL de un servicio de formularios en el atributo `data-endpoint` del formulario (`index.html`, `id="form-contacto"`) y cambia su `action` por esa misma URL. La web envía un `POST` con JSON: `nombre`, `empresa`, `trabajadores`, `email`, `telefono`, `servicio_prevencion`, `mensaje`, `_gotcha` (campo trampa para bots: descarta las solicitudes que lo traigan relleno), `origen` y `fecha`. Funciona, por ejemplo, con:
+Para recibir las solicitudes directamente, pon la URL de un servicio de formularios en el atributo `data-endpoint` del formulario (`index.html`, `id="form-contacto"`) y cambia su `action` por esa misma URL (quita también `enctype="text/plain"`, que solo sirve para el envío por correo). La web envía un `POST` con JSON: `nombre`, `empresa`, `trabajadores`, `email`, `telefono`, `servicio_prevencion`, `mensaje`, `_gotcha` (campo trampa para bots: descarta las solicitudes que lo traigan relleno), `origen` y `fecha`. Funciona, por ejemplo, con:
 
 - un webhook de Make o Zapier que te reenvíe el correo;
 - Formspree (`https://formspree.io/f/XXXX`).

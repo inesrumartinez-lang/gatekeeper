@@ -162,7 +162,7 @@
     </ul>
     <div class="menu__foot">
       <a class="btn btn--solid btn--lg" href="#solicitud"><span>Pide tu propuesta</span><span class="btn__icon" aria-hidden="true"><svg><use href="#i-arrow"/></svg><svg><use href="#i-arrow"/></svg></span></a>
-      <p class="menu__mail">hola@seniar.es</p>
+      <p class="menu__mail"><a href="mailto:hola@seniar.es">hola@seniar.es</a></p>
     </div>
   </nav>
 </div>
@@ -249,7 +249,7 @@
       <span class="tick"><i class="tick__dot tick__dot--warn"></i><span class="tick__date">2 oct</span><span class="tick__who">A.&nbsp;Romero</span><span class="tick__what">Cita reservada para el 23 oct</span></span>
       <span class="tick"><i class="tick__dot tick__dot--warn"></i><span class="tick__date">19 oct</span><span class="tick__who">A.&nbsp;Romero</span><span class="tick__what">Recordatorio enviado</span></span>
       <span class="tick"><i class="tick__dot tick__dot--ok"></i><span class="tick__date">23 oct</span><span class="tick__who">A.&nbsp;Romero</span><span class="tick__what">Asistencia confirmada</span></span>
-      <span class="tick"><i class="tick__dot tick__dot--ok"></i><span class="tick__date">30 oct</span><span class="tick__who">A.&nbsp;Romero</span><span class="tick__what">Vigente · 365 días</span></span>
+      <span class="tick"><i class="tick__dot tick__dot--ok"></i><span class="tick__date">30 oct</span><span class="tick__who">A.&nbsp;Romero</span><span class="tick__what">Vigente · 358 días</span></span>
     </div>
     <div class="ticker__row" data-ticker="1">
       <span class="tick"><i class="tick__dot tick__dot--late"></i><span class="tick__date">5 oct</span><span class="tick__who">C.&nbsp;Gil</span><span class="tick__what">Caducado: disponibilidad pedida</span></span>
@@ -361,9 +361,9 @@
                       <thead><tr><th scope="col">Trabajador</th><th scope="col">Días</th><th scope="col">Estado</th></tr></thead>
                       <tbody>
                         <tr><td>A.&nbsp;Romero</td><td class="num">90</td><td><span class="chip chip--ok">Vigente</span></td></tr>
-                        <tr><td>T.&nbsp;Lara</td><td class="num">51</td><td><span class="chip chip--warn">En gestión</span></td></tr>
-                        <tr><td>E.&nbsp;Ruiz</td><td class="num">−14</td><td><span class="chip chip--late">Caducado</span></td></tr>
-                        <tr><td>N.&nbsp;Prieto</td><td class="num">176</td><td><span class="chip chip--ok">Vigente</span></td></tr>
+                        <tr><td>T.&nbsp;Lara</td><td class="num">47</td><td><span class="chip chip--warn">En gestión</span></td></tr>
+                        <tr><td>E.&nbsp;Ruiz</td><td class="num">−9</td><td><span class="chip chip--late">Caducado</span></td></tr>
+                        <tr><td>N.&nbsp;Prieto</td><td class="num">212</td><td><span class="chip chip--ok">Vigente</span></td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -456,13 +456,13 @@
                   <span class="chip chip--ok">Recibido</span>
                 </div>
               </li>
-              <li class="step step--opt" data-step data-day="365" data-chip="Vigente" data-chip-state="ok" data-title="Actualizamos el registro">
-                <p class="step__meta"><span class="step__num">09</span><span class="step__tag">Vuelta a 365</span></p>
+              <li class="step step--opt" data-step data-day="358" data-chip="Vigente" data-chip-state="ok" data-title="Actualizamos el registro">
+                <p class="step__meta"><span class="step__num">09</span><span class="step__tag">Otro año por delante</span></p>
                 <h3 class="step__title">Actualizamos el registro</h3>
-                <p class="step__text">Anotamos la fecha del nuevo reconocimiento y el contador vuelve a 365 días. El ciclo empieza otra vez, sin que tengas que acordarte.</p>
+                <p class="step__text">Anotamos la fecha del nuevo reconocimiento y el contador vuelve a contar 365 días desde ella. El ciclo empieza otra vez, sin que tengas que acordarte.</p>
                 <div class="artifact artifact--row">
-                  <div class="row__who"><span class="row__name">A.&nbsp;Romero</span><span class="row__date">Último reconocimiento: 23/10</span></div>
-                  <span class="row__days">365</span>
+                  <div class="row__who"><span class="row__name">A.&nbsp;Romero</span><span class="row__date">Último reconocimiento: 23/10/2026</span></div>
+                  <span class="row__days">358</span>
                   <span class="chip chip--ok">Vigente</span>
                 </div>
               </li>
@@ -509,7 +509,7 @@
           <span class="sheet__fx">fx</span>
           <span class="sheet__expr" data-sheet-expr>=B2+365-HOY()</span>
         </div>
-        <div class="sheet__scroll" tabindex="0" role="region" aria-label="Registro de ejemplo, desplazable en horizontal">
+        <div class="sheet__scroll" data-sheet-scroll>
           <table class="sheet__table">
             <caption class="visually-hidden">Ejemplo de registro de reconocimientos médicos con datos ficticios</caption>
             <thead>
@@ -590,7 +590,7 @@
             </tbody>
           </table>
         </div>
-        <p class="sheet__note"><span>Ejemplo con datos ficticios.</span><span class="sheet__live" role="status" aria-live="polite" data-sheet-status>Mostrando 7 trabajadores</span></p>
+        <p class="sheet__note"><span>Ejemplo con datos ficticios.<span class="sheet__compact"> En pantallas pequeñas se muestran las columnas principales.</span></span><span class="sheet__live" role="status" aria-live="polite" data-sheet-status>Mostrando 7 trabajadores</span></p>
       </div>
     </div>
   </section>
