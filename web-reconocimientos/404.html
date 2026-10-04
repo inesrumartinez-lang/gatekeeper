@@ -27,7 +27,7 @@
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { width: min(100% - 32px, 1120px); margin-inline: auto; padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px); }
+  .wrap { width: min(100% - clamp(16px, 4vw, 56px) * 2, 1360px); margin-inline: auto; padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px); }
   header .wrap { display: flex; align-items: center; min-height: 72px; padding-top: env(safe-area-inset-top, 0px); }
   .brand { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--snow); text-decoration: none; font-size: 1.4375rem; font-weight: 640; font-stretch: 112%; letter-spacing: -0.04em; }
   .brand svg { width: 30px; height: 30px; }

@@ -1,3 +1,6 @@
+Seniar Mono es una versión modificada de Geist Mono: subconjunto de caracteres para español
+y grosores limitados.
+
 Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font.git) GeistMono-Italic[wght].ttf: Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font.git)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.

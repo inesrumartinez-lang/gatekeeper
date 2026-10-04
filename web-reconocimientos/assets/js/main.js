@@ -301,7 +301,8 @@
      equilibrado del navegador) y se restauran al terminar la animación */
   function revealSplit(el) {
     if (reduce || el.children.length) { el.classList.add('is-in'); return; }
-    const text = el.textContent.replace(/\s+/g, ' ').trim();
+    /* Solo los espacios normales separan palabras: los &nbsp; se respetan */
+    const text = el.textContent.replace(/[ \t\n\r\f]+/g, ' ').trim();
     const words = text.split(' ');
     el.textContent = '';
     const spans = words.map((w, i) => {
@@ -357,6 +358,8 @@
   } else {
     revealTargets.forEach(reveal);
   }
+  /* En pantallas muy altas (renderizadores de buscadores) todo aparece sin esperar al scroll */
+  onMeasureFns.push(() => { if (vh >= 3000) revealTargets.forEach(reveal); });
   /* Un elemento enfocable nunca debe quedar invisible esperando al scroll */
   document.addEventListener('focusin', (e) => {
     const pending = e.target.closest('[data-reveal]:not(.is-in), [data-split]:not(.is-in)');
@@ -366,17 +369,27 @@
   /* ------------------------------------------------------------------
      Dial de portada: un ciclo completo en menos de cinco segundos
      ------------------------------------------------------------------ */
+  const CHIP_STATE = {
+    'Vigente': 'ok',
+    'Disponibilidad pedida': 'warn',
+    'Cita pedida': 'warn',
+    'Cita reservada': 'ok',
+    'Recordatorio enviado': 'warn',
+    'Asistencia confirmada': 'ok',
+    'Certificado recibido': 'ok'
+  };
   function makeDial(el) {
     const num = $('[data-dial-num]', el);
     const chip = $('[data-dial-chip]', el);
     const arc = $('.dial__arc', el);
-    const mask = $('.dial__mask', el);
+    const ticksOn = $('[data-dial-ticks]', el);
     const head = $('[data-dial-head]', el);
     const halo = $('[data-dial-halo]', el);
     const R = 150;
     let lastN = null;
     let lastState = null;
     let lastLabel = null;
+    let lastFirst = -1;
     return {
       set(d, label) {
         const n = Math.round(d);
@@ -387,9 +400,12 @@
         const offset = (-elapsed).toFixed(2);
         arc.style.strokeDasharray = dash;
         arc.style.strokeDashoffset = offset;
-        /* La máscara hereda el giro del círculo que enmascara: mismo trazo */
-        mask.style.strokeDasharray = dash;
-        mask.style.strokeDashoffset = offset;
+        /* Marcas encendidas: una por cada día que queda (sin máscaras, que son caras de pintar) */
+        const first = clamp(Math.ceil(elapsed - 0.001), 0, 365);
+        if (first !== lastFirst) {
+          lastFirst = first;
+          ticksOn.style.strokeDasharray = `0 ${first}` + ' 0.16 0.84'.repeat(365 - first);
+        }
         const th = (elapsed / 365) * Math.PI * 2;
         const cx = (200 + R * Math.sin(th)).toFixed(2);
         const cy = (200 - R * Math.cos(th)).toFixed(2);
@@ -399,7 +415,11 @@
         halo.setAttribute('cy', cy);
         const state = d > 55.5 ? 'ok' : d > 0 ? 'warn' : 'late';
         if (state !== lastState) { el.dataset.state = state; lastState = state; }
-        if (label && label !== lastLabel) { chip.textContent = label; lastLabel = label; }
+        if (label && label !== lastLabel) {
+          chip.textContent = label;
+          chip.dataset.chipState = CHIP_STATE[label] || 'ok';
+          lastLabel = label;
+        }
       }
     };
   }
@@ -434,9 +454,9 @@
       dial.set(365, 'Vigente');
       await wait(250);
       if (cancelled()) return;
-      await tween(365, 55, 1000, easeInOut, (v) => dial.set(v, v > 55.5 ? 'Vigente' : 'En gestión'), cancelled);
+      await tween(365, 55, 1000, easeInOut, (v) => dial.set(v, 'Vigente'), cancelled);
       if (cancelled()) return;
-      dial.set(55, 'En gestión');
+      dial.set(55, 'Disponibilidad pedida');
       showLine(0);
       await wait(380);
       if (cancelled()) return;
@@ -447,22 +467,21 @@
       await tween(48, 45, 260, easeOut, (v) => dial.set(v, 'Cita reservada'), cancelled);
       if (cancelled()) return;
       showLine(3);
-      await tween(45, 25, 480, easeInOut, (v) => dial.set(v, 'Recordatorios'), cancelled);
+      await tween(45, 25, 480, easeInOut, (v) => dial.set(v, 'Recordatorio enviado'), cancelled);
       if (cancelled()) return;
       showLine(4);
-      await tween(25, 24, 220, easeOut, (v) => dial.set(v, 'Asistencia'), cancelled);
+      await tween(25, 24, 220, easeOut, (v) => dial.set(v, 'Asistencia confirmada'), cancelled);
       if (cancelled()) return;
       showLine(5);
-      await tween(24, 17, 260, easeOut, (v) => dial.set(v, 'Certificado'), cancelled);
+      await tween(24, 17, 260, easeOut, (v) => dial.set(v, 'Certificado recibido'), cancelled);
       if (cancelled()) return;
       dialEl.classList.remove('dial--flash');
       void dialEl.offsetWidth;
       dialEl.classList.add('dial--flash');
-      await tween(17, 365, 850, easeOut, (v) => dial.set(v, v > 300 ? 'Vigente' : 'Certificado'), cancelled);
+      await tween(17, 365, 850, easeOut, (v) => dial.set(v, v > 300 ? 'Vigente' : 'Certificado recibido'), cancelled);
       if (cancelled()) return;
       playing = false;
       dial.set(365, 'Vigente');
-      replay.hidden = false;
       replay.removeAttribute('aria-disabled');
     }
 
@@ -483,8 +502,8 @@
         new IntersectionObserver((entries) => {
           heroVisible = entries.some((e) => e.isIntersecting);
           if (heroVisible && !started && document.visibilityState === 'visible') start();
-          if (!heroVisible && playing) { finalState(); replay.hidden = false; }
-          if (!heroVisible && !started) { started = true; finalState(); replay.hidden = false; }
+          if (!heroVisible && playing) finalState();
+          if (!heroVisible && !started) { started = true; finalState(); }
         }, { threshold: 0.3 }).observe(hero);
       } else {
         start();
@@ -493,7 +512,9 @@
     if (document.readyState === 'complete') begin();
     else window.addEventListener('load', begin, { once: true });
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && playing) { finalState(); replay.hidden = false; }
+      if (document.visibilityState === 'hidden' && playing) finalState();
+      /* Si la página se abrió en segundo plano, la animación empieza al mostrarse */
+      else if (document.visibilityState === 'visible' && heroVisible && !started) start();
     });
     replay.addEventListener('click', () => {
       if (replay.getAttribute('aria-disabled') === 'true') return;
@@ -608,7 +629,7 @@
     const fill = $('[data-steps-fill]', process);
     const list = $('.steps', process);
     const dots = $$('[data-goto]', process);
-    const pinQuery = window.matchMedia('(min-width: 1000px) and (min-height: 620px)');
+    const pinQuery = window.matchMedia('(min-width: 1000px) and (min-height: 620px) and (max-height: 2999px)');
 
     const frag = document.createDocumentFragment();
     for (let i = 0; i <= 90; i++) frag.appendChild(document.createElement('i'));
@@ -665,6 +686,7 @@
         d.classList.toggle('is-passed', k < i);
       });
       chipEl.textContent = steps[i].dataset.chip;
+      chipEl.dataset.chipState = steps[i].dataset.chipState || 'ok';
       indexEl.textContent = String(i + 1).padStart(2, '0');
       titleEl.textContent = steps[i].dataset.title;
     };
@@ -718,7 +740,7 @@
       const st = e.target.closest('[data-step]');
       if (!st) return;
       const k = steps.indexOf(st);
-      if (k !== active) window.scrollTo({ top: sceneTop + k * stepPx + 2, behavior: 'auto' });
+      if (k !== active) window.scrollTo({ top: sceneTop + k * stepPx + 2, behavior: 'instant' });
     });
   }
 
@@ -734,7 +756,7 @@
         result.classList.toggle('is-no', !yes);
         result.textContent = yes
           ? 'Anotado. En siete días pedimos el certificado de aptitud.'
-          : 'Sin problema. Volvemos a pedir disponibilidad y buscamos una cita nueva.';
+          : 'Entendido. Volvemos a pedir tu disponibilidad y gestionamos una cita nueva.';
       });
     });
   });
@@ -779,6 +801,8 @@
       window.setTimeout(() => {
         $('[data-live-disp]', live).textContent = 'Jue · mañana';
         $('[data-live-cita]', live).textContent = 'Jue 22/10 · 09:00';
+        const sub = $('[data-live-sub]', live);
+        if (sub) sub.textContent = '22/10 · 09:00';
         $('[data-live-centro]', live).textContent = 'Centro Norte';
         $('[data-live-chip]', live).textContent = 'Cita reservada';
         live.classList.add('is-updated');
@@ -823,6 +847,7 @@
     const toV = (n) => Math.round((1000 * Math.log(clamp(n, MIN, MAX) / MIN)) / Math.log(MAX / MIN));
     const shownVals = { year: 250, month: 21, comms: 1750, week: 34 };
     const calcStatus = $('[data-calc-status]', calc);
+    const calcTip = $('[data-calc-tip]', calc);
     let anim = 0;
     let statusTimer = 0;
 
@@ -839,10 +864,12 @@
       range.style.setProperty('--fill', (Number(range.value) / 10).toFixed(1) + '%');
       range.setAttribute('aria-valuetext', `${fmt(n)} ${n === 1 ? 'trabajador' : 'trabajadores'}`);
       if (source !== 'number') number.value = fmt(n);
+      if (calcTip) calcTip.hidden = n >= 50;
       if (source && calcStatus) {
         window.clearTimeout(statusTimer);
         statusTimer = window.setTimeout(() => {
-          calcStatus.textContent = `Con ${fmt(n)} ${n === 1 ? 'trabajador' : 'trabajadores'}: ${fmt(targets.year)} reconocimientos al año, unas ${fmt(targets.month)} citas al mes y ${fmt(targets.comms)} correos y avisos.`;
+          const t = targets;
+          calcStatus.textContent = `Con ${fmt(n)} ${n === 1 ? 'trabajador' : 'trabajadores'}: ${fmt(t.year)} ${t.year === 1 ? 'reconocimiento' : 'reconocimientos'} al año, ${fmt(t.month)} ${t.month === 1 ? 'cita' : 'citas'} al mes de media y ${fmt(t.comms)} correos y avisos al año.`;
         }, 700);
       }
       const id = ++anim;
@@ -868,7 +895,7 @@
       else if (e.key === 'End') n = MAX;
       else return;
       e.preventDefault();
-      update(clamp(n, MIN, MAX), null);
+      update(clamp(n, MIN, MAX), 'key');
     });
     number.addEventListener('input', () => {
       const n = parseCount(number.value);
@@ -910,7 +937,7 @@
       empresa: (v) => (v.trim().length >= 2 ? '' : 'Indica el nombre de tu empresa.'),
       trabajadores: (v) => {
         const n = parseCount(v);
-        return /^[\d\s.]+$/.test(v.trim()) && n >= 1 ? '' : 'Indica cuántas personas tiene tu plantilla, por ejemplo 250.';
+        return /^[\d\s.]+$/.test(v.trim()) && n >= 1 ? '' : 'Indica cuántas personas tiene tu plantilla, por ejemplo, 250.';
       },
       email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) ? '' : 'Escribe un correo válido, por ejemplo, nombre@empresa.es.'),
       telefono: (v) => (!v.trim() || /^[+()\d\s.-]{9,20}$/.test(v.trim()) ? '' : 'Revisa el teléfono o déjalo en blanco.'),

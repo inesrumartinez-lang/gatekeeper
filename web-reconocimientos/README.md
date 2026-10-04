@@ -17,10 +17,21 @@ python3 -m http.server 8080
 | Email de contacto `hola@seniar.es` (provisional) | `index.html`, `assets/js/main.js` (`CONFIG.email`), páginas legales, `404.html` |
 | Dominio `https://www.seniar.es` (provisional) | `index.html` (canonical, Open Graph y JSON-LD), páginas legales (canonical), `robots.txt`, `sitemap.xml` |
 | Datos del titular: nombre o razón social, NIF, domicilio, teléfono y datos registrales | `aviso-legal.html`, `privacidad.html` y la primera capa del formulario en `index.html` (marcados en amarillo con la clase `ph`) |
-| Proveedores de alojamiento, correo y formulario | `privacidad.html` |
+| Proveedores de alojamiento, correo y formulario, con su país y garantías, y el plazo de conservación de los registros de conexión | `privacidad.html` (si no usas un servicio de formularios, borra esa línea de la lista) |
+| Fechas de «Última actualización» | Páginas legales y `sitemap.xml` (`lastmod`), cada vez que cambies su contenido |
 | Marca | Comprueba que «Seniar» esté libre en la OEPM y la EUIPO antes de registrarla |
 
-Busca y reemplaza en toda la carpeta para no dejarte ninguno. Tras publicar, comprueba que el alojamiento o su CDN no añaden cookies ni analítica: la política de cookies dice que no hay ninguna.
+Busca y reemplaza en toda la carpeta para no dejarte ninguno. Tras publicar, comprueba que el alojamiento o su CDN no añaden cookies, píxeles de seguimiento ni analítica: la política de cookies dice que no hay ninguna.
+
+## Protección de datos al prestar el servicio
+
+La web promete que tratas los datos de los trabajadores de tus clientes como encargado del tratamiento. Antes de empezar con el primer cliente:
+
+- Firma con cada cliente un contrato de encargo del tratamiento (artículo 28 del RGPD) que cubra datos identificativos y de contacto, disponibilidad, citas y la conclusión de aptitud.
+- Lleva el registro de actividades de tratamiento como encargado (artículo 30.2 del RGPD).
+- Aplica medidas de seguridad acordes con un dato de salud (artículo 32 del RGPD): acceso restringido, cifrado y doble factor en el correo y en el Excel compartido.
+- Valora con un asesor si necesitas una evaluación de impacto o un delegado de protección de datos según tu volumen.
+- Si algún proveedor (correo, almacenamiento) está fuera del Espacio Económico Europeo, comprueba que ofrece garantías válidas para la transferencia y guarda una copia: la política de privacidad ofrece enviarla.
 
 ## Formulario de contacto
 
@@ -35,7 +46,9 @@ Añade el dominio del servicio a `connect-src` y `form-action` en `_headers`.
 
 ## Cabeceras del alojamiento
 
-`_headers` (formato de Netlify y Cloudflare Pages) define la caché, la política de seguridad de contenidos y otras cabeceras. Activa también la compresión Brotli o Gzip y redirige `http`, la versión sin `www` y `/index.html` a la URL canónica.
+`_headers` (formato de Netlify y Cloudflare Pages) define la caché de los recursos inmutables, la política de seguridad de contenidos y otras cabeceras. Activa también la compresión Brotli o Gzip y redirige `http`, la versión sin `www` y `/index.html` a la URL canónica.
+
+Cloudflare Pages redirige las URL acabadas en `.html` a su versión sin extensión (`/privacidad.html` → `/privacidad`). Funciona sin tocar nada; si quieres evitar ese salto, cambia los enlaces y los `canonical` de las páginas legales a la versión sin extensión.
 
 Si cambias el script en línea del `<head>` de `index.html`, recalcula su hash para la CSP:
 
@@ -60,6 +73,6 @@ favicon.ico, robots.txt, sitemap.xml, site.webmanifest, _headers
 
 ## Notas
 
-- Las fuentes son subconjuntos en español de Mona Sans y Geist Mono, renombradas como exige su licencia. El cero de las cifras tabulares se ha cambiado por el cero normal, sin barra.
+- Las fuentes son subconjuntos en español de Mona Sans y Geist Mono (licencia SIL Open Font License 1.1). Mona Sans tiene «Mona» como nombre reservado, así que su versión modificada se llama Seniar Sans; Geist Mono no tiene nombres reservados y se ha renombrado como Seniar Mono por coherencia. Se conservan los avisos de copyright y licencia originales dentro de cada archivo. El cero de las cifras tabulares de Seniar Sans se ha cambiado por el cero normal, sin barra.
 - La web respeta la preferencia «reducir movimiento» del sistema: sin animaciones y con todo el contenido visible.
 - Las animaciones ligadas al scroll usan CSS (`animation-timeline`) donde el navegador lo admite y JavaScript en el resto.
