@@ -398,6 +398,53 @@ function comprobar(nombre, cond){
   const detalleInt = (await pag.locator('#cal-detalle').textContent()) || '';
   comprobar('El detalle muestra las sesiones de hoy', /UAM/.test(detalleInt) && /Tesis Z/.test(detalleInt));
 
+  // --- Notas de día: explicación visible y continua en el calendario ---
+  // (el detalle de hoy quedó abierto por el test anterior)
+  comprobar('El detalle del día ofrece añadir nota', (await pag.locator('#cal-detalle [data-accion="nueva-nota"]').count()) === 1);
+  await pag.click('#cal-detalle [data-accion="nueva-nota"]');
+  await pag.waitForTimeout(300);
+  comprobar('Se abre el modal de nota con el día preseleccionado',
+    await pag.locator('#velo-nota').evaluate(v => v.classList.contains('visible')) &&
+    (await pag.inputValue('#nota-desde')) === hoyClaveInt &&
+    (await pag.inputValue('#nota-hasta')) === hoyClaveInt);
+  await pag.fill('#nota-texto', 'Congreso');
+  await pag.click('#nota-guardar');
+  await pag.waitForTimeout(400);
+  comprobar('El día de hoy luce la banda naranja de nota',
+    (await pag.locator(`#cal-grid .cal-dia[data-fecha="${hoyClaveInt}"] .nota-banda`).count()) === 1);
+  comprobar('La banda también aparece en el calendario de intensidad',
+    (await pag.locator(`#int-grid .int-dia[data-fecha="${hoyClaveInt}"] .nota-banda`).count()) === 1);
+  comprobar('El detalle del día muestra la nota', /Congreso/.test((await pag.locator('#cal-detalle').textContent()) || ''));
+  comprobar('La nota figura en la lista del mes', /Congreso/.test((await pag.locator('#cal-notas').textContent()) || ''));
+  // Nota de varios días seguidos: la banda debe verse continua
+  await pag.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('gatekeeper_v1'));
+    const f = new Date();
+    const pre = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-';
+    d.notas.push({ id: 'nrango', texto: 'Vacaciones', desde: pre + '10', hasta: pre + '12' });
+    localStorage.setItem('gatekeeper_v1', JSON.stringify(d));
+  });
+  await pag.reload();
+  await pag.waitForTimeout(500);
+  await pag.click('nav button[data-vista="historial"]');
+  await pag.waitForTimeout(300);
+  const diasConNota = await pag.evaluate(() => {
+    const dia = new Date().getDate();
+    return (dia >= 10 && dia <= 12) ? 3 : 4;   // hoy puede caer dentro del rango
+  });
+  comprobar('Los días del rango (y hoy) lucen banda', (await pag.locator('#cal-grid .nota-banda').count()) === diasConNota);
+  comprobar('La banda del rango se une hacia la derecha', (await pag.locator('#cal-grid .nota-banda.nd').count()) >= 1);
+  comprobar('La banda del rango se une hacia la izquierda', (await pag.locator('#cal-grid .nota-banda.ni').count()) >= 1);
+  // Editar desde la lista del mes y borrar
+  await pag.locator('#cal-notas [data-editar-nota="nrango"]').click();
+  await pag.waitForTimeout(300);
+  comprobar('Editar desde la lista precarga la nota', (await pag.inputValue('#nota-texto')) === 'Vacaciones');
+  await pag.click('#nota-borrar');
+  await pag.waitForTimeout(400);
+  const notasTrasBorrar = await pag.evaluate(() => JSON.parse(localStorage.getItem('gatekeeper_v1')).notas.length);
+  comprobar('Borrar la nota la elimina y solo queda la de hoy',
+    notasTrasBorrar === 1 && (await pag.locator('#cal-grid .nota-banda').count()) === 1);
+
   comprobar('Sin errores de JavaScript en consola', erroresJS.length === 0);
   if (erroresJS.length) console.log('Errores:', erroresJS);
 

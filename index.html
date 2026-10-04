@@ -34,6 +34,7 @@
   --grisestado:#8494a3;   /* bloqueado */
   --ambar:#d9bd8d;        /* pausado / avisos (arena) */
   --rojo:#dd9791;         /* peligro (coral apagado) */
+  --nota:#e8a04c;         /* banda de notas del calendario (naranja) */
   --rojo-osc:#4a2723;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -240,6 +241,18 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
 .hist-fila .pt{width:10px;height:10px;border-radius:3px;flex:none}
 .hist-fila b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
 .hist-fila .der{color:var(--gris);flex:none;font-variant-numeric:tabular-nums}
+
+/* ---------- Notas de días: banda naranja continua bajo los días anotados ---------- */
+.cal-dia{position:relative}
+.nota-banda{position:absolute;left:3px;right:3px;bottom:2px;height:4px;border-radius:2px;
+  background:var(--nota);z-index:1}
+.nota-banda.ni{left:-4px;border-top-left-radius:0;border-bottom-left-radius:0}
+.nota-banda.nd{right:-4px;border-top-right-radius:0;border-bottom-right-radius:0}
+.nota-fila{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--borde);font-size:13px}
+.nota-fila:last-child{border-bottom:none}
+.nota-fila .pt{width:12px;height:4px;border-radius:2px;background:var(--nota);flex:none}
+.nota-fila .rango{color:var(--gris);flex:none;font-variant-numeric:tabular-nums}
+.nota-fila b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 
 /* ---------- Calendario de intensidad (relleno = duración del trabajo) ---------- */
 .int-dia{background:var(--panel);border-radius:8px;height:62px;position:relative;padding:4px 4px 0}
@@ -468,6 +481,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <div id="cal-detalle" style="display:none;background:var(--panel);border-radius:12px;padding:12px;margin-top:12px"></div>
         <div class="cal-leyenda" id="cal-leyenda"></div>
         <p class="nota" id="cal-total" style="margin-top:10px"></p>
+        <div id="cal-notas"></div>
       </div>
       <div class="crd">
         <h2><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg> Tiempo por proyecto</h2>
@@ -535,7 +549,7 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
         <h2><svg class="ico" aria-hidden="true"><use href="#i-danger"/></svg> Zona de peligro</h2>
         <button class="btn btn-rojo" id="btn-borrar-todo">Borrar todos los datos</button>
       </div>
-      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v34 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
+      <p class="nota" style="text-align:center" id="pie-version">Gatekeeper v35 · Los proyectos nuevos nacen bloqueados. Esa es la gracia.</p>
     </section>
 
   </div><!-- /app-normal -->
@@ -655,6 +669,28 @@ body.teclado-abierto nav, body.teclado-abierto .fab{display:none}
     <div class="fila-btns">
       <button class="btn btn-borde" id="dias-cancelar">Cancelar</button>
       <button class="btn btn-verde" id="dias-guardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: NOTA DE DÍAS (explicación en el calendario) ============ -->
+<div class="velo" id="velo-nota">
+  <div class="hoja">
+    <h3><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg> <span id="nota-titulo">Nota</span></h3>
+    <p class="msj">Explica qué pasó esos días (vacaciones, enfermedad, congreso…). La nota se marca en naranja en el calendario; si abarca varios días seguidos, la banda se ve continua.</p>
+    <label class="campo"><span class="et">Explicación</span>
+      <input type="text" id="nota-texto" maxlength="80" placeholder="Ej.: Vacaciones">
+    </label>
+    <label class="campo"><span class="et">Desde</span>
+      <input type="date" id="nota-desde">
+    </label>
+    <label class="campo"><span class="et">Hasta (incluido)</span>
+      <input type="date" id="nota-hasta">
+    </label>
+    <div class="fila-btns">
+      <button class="btn btn-borde" id="nota-cancelar">Cancelar</button>
+      <button class="btn btn-rojo" id="nota-borrar" style="display:none">Borrar</button>
+      <button class="btn btn-verde" id="nota-guardar">Guardar</button>
     </div>
   </div>
 </div>
@@ -809,6 +845,38 @@ function fmtFecha(clave){
 
 function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
+/* ---------- Notas de días: explicación visible en el calendario ---------- */
+
+function fechaClave(y, m, d){
+  return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+
+// Notas que cubren una fecha concreta ('YYYY-MM-DD')
+function notasDelDia(fecha){
+  return (estado.notas || []).filter(function(n){ return n.desde <= fecha && fecha <= n.hasta; });
+}
+
+function fmtRango(n){
+  return n.desde === n.hasta ? fmtFecha(n.desde) : fmtFecha(n.desde) + ' \u2013 ' + fmtFecha(n.hasta);
+}
+
+// Banda naranja bajo un día anotado. Si el día vecino de la misma semana
+// también está anotado, la banda se alarga hasta tocarlo y el rango se ve
+// como una línea continua.
+function bandaNota(y, m, d, diasMes, huecos){
+  if (notasDelDia(fechaClave(y, m, d)).length === 0) return '';
+  var col = (huecos + d - 1) % 7;   // columna en la rejilla (0 = lunes)
+  var sigueIzq = d > 1 && col > 0 && notasDelDia(fechaClave(y, m, d - 1)).length > 0;
+  var sigueDer = d < diasMes && col < 6 && notasDelDia(fechaClave(y, m, d + 1)).length > 0;
+  return '<div class="nota-banda' + (sigueIzq ? ' ni' : '') + (sigueDer ? ' nd' : '') + '"></div>';
+}
+
+function filaNota(n){
+  return '<div class="nota-fila"><span class="pt"></span><b>' + esc(n.texto) + '</b>' +
+    '<span class="rango">' + fmtRango(n) + '</span>' +
+    '<button class="ses-btn" data-editar-nota="' + n.id + '" aria-label="Editar nota">' + ico('edit') + '</button></div>';
+}
+
 // Color estable de un proyecto: la familia la decide su categoría y el
 // tono, su posición entre los proyectos de esa misma categoría
 function colorDeProyecto(id){
@@ -837,7 +905,7 @@ function esc(t){
 
 function datosVacios(){
   return { version:1, proyectos:[], sesiones:[], crono:null,
-           bolsaGastada:0, eliminados:[],
+           bolsaGastada:0, eliminados:[], notas:[],
            config:{ orClave:'', orModelo:MODELO_DEFECTO } };
 }
 
@@ -851,6 +919,7 @@ function normalizarConfig(datos){
   if (!('ultimaCopiaAuto' in datos)) datos.ultimaCopiaAuto = null;
   if (typeof datos.config.webhookCopias !== 'string') datos.config.webhookCopias = '';
   if (!Array.isArray(datos.eliminados)) datos.eliminados = [];
+  if (!Array.isArray(datos.notas)) datos.notas = [];
   // (antes se llamaba emergenciaUsada; se migra el valor si existía)
   if (typeof datos.viaLibreUsada !== 'boolean'){
     datos.viaLibreUsada = datos.emergenciaUsada === true;
@@ -1595,6 +1664,21 @@ function tarjetaProyecto(p){
 var calMes = null;
 // Día seleccionado en el calendario ('YYYY-MM-DD'); null = ninguno
 var calDiaSel = null;
+// Nota en edición en el modal (null = nota nueva)
+var notaEditandoId = null;
+
+// Abre el modal de nota: vacío para crear (prellenado con el día
+// seleccionado) o con los datos de la nota a editar
+function abrirNota(id){
+  notaEditandoId = id || null;
+  var n = id ? estado.notas.find(function(x){ return x.id === id; }) : null;
+  document.getElementById('nota-titulo').textContent = n ? 'Editar nota' : 'Nueva nota';
+  document.getElementById('nota-texto').value = n ? n.texto : '';
+  document.getElementById('nota-desde').value = n ? n.desde : (calDiaSel || hoy());
+  document.getElementById('nota-hasta').value = n ? n.hasta : (calDiaSel || hoy());
+  document.getElementById('nota-borrar').style.display = n ? '' : 'none';
+  document.getElementById('velo-nota').classList.add('visible');
+}
 
 // Pinta el detalle del día seleccionado: cada registro por separado,
 // con sus botones de editar y borrar (igual que en Sesiones de hoy)
@@ -1617,6 +1701,9 @@ function renderCalDetalle(){
           '<button class="ses-btn" data-borrar-ses="' + s.id + '" aria-label="Borrar" style="color:var(--rojo)">' + ico('trash') + '</button></div>';
       }).join('');
   }
+  // Notas que cubren el día y botón para añadir una nueva
+  panel.innerHTML += notasDelDia(calDiaSel).map(filaNota).join('') +
+    '<button class="btn btn-borde" data-accion="nueva-nota" style="width:100%;margin-top:10px">+ A\u00f1adir nota a este d\u00eda</button>';
   panel.style.display = 'block';
 }
 
@@ -1668,6 +1755,7 @@ function renderHistorial(){
     } else {
       html += '<div class="cal-barra"></div>';
     }
+    html += bandaNota(calMes.y, calMes.m, d, diasMes, huecos);
     html += '</div>';
   }
   document.getElementById('cal-grid').innerHTML = html;
@@ -1684,6 +1772,12 @@ function renderHistorial(){
   document.getElementById('cal-total').textContent = totalMes > 0
     ? 'Total del mes: ' + fmtHoras(totalMes) + '.'
     : 'Sin horas registradas este mes.';
+
+  // Notas del mes (explicaciones de días), ordenadas por fecha
+  var notasMes = (estado.notas || []).filter(function(n){
+    return n.desde <= prefijo + String(diasMes).padStart(2, '0') && n.hasta >= prefijo + '01';
+  }).sort(function(a, b){ return a.desde < b.desde ? -1 : 1; });
+  document.getElementById('cal-notas').innerHTML = notasMes.map(filaNota).join('');
 
   // Repintar el detalle del día seleccionado (se conserva tras editar)
   renderCalDetalle();
@@ -1717,6 +1811,7 @@ function renderHistorial(){
           return '<div style="height:' + (datosI[id] / totalI * 100) + '%;background:' + colorDeProyecto(id) + '"></div>';
         }).join('') + '</div></div>';
     }
+    htmlInt += bandaNota(calMes.y, calMes.m, dI, diasMes, huecos);
     htmlInt += '</div>';
   }
   document.getElementById('int-grid').innerHTML = htmlInt;
@@ -2841,12 +2936,52 @@ function conectarEventos(){
     renderCalDetalle();
   });
 
-  // Editar y borrar registros también desde el detalle del calendario
+  // Editar y borrar registros también desde el detalle del calendario,
+  // y añadir o editar notas de día
   document.getElementById('cal-detalle').addEventListener('click', function(ev){
     var e = ev.target.closest('[data-editar-ses]');
     if (e){ abrirEditarSesion(e.dataset.editarSes); return; }
     var b = ev.target.closest('[data-borrar-ses]');
-    if (b){ borrarSesion(b.dataset.borrarSes); }
+    if (b){ borrarSesion(b.dataset.borrarSes); return; }
+    var nn = ev.target.closest('[data-accion="nueva-nota"]');
+    if (nn){ abrirNota(null); return; }
+    var en = ev.target.closest('[data-editar-nota]');
+    if (en){ abrirNota(en.dataset.editarNota); }
+  });
+
+  // Editar una nota desde la lista de notas del mes
+  document.getElementById('cal-notas').addEventListener('click', function(ev){
+    var en = ev.target.closest('[data-editar-nota]');
+    if (en) abrirNota(en.dataset.editarNota);
+  });
+
+  // Modal de nota: guardar, borrar y cancelar
+  document.getElementById('nota-cancelar').addEventListener('click', function(){
+    document.getElementById('velo-nota').classList.remove('visible');
+  });
+  document.getElementById('nota-borrar').addEventListener('click', function(){
+    estado.notas = estado.notas.filter(function(n){ return n.id !== notaEditandoId; });
+    guardar();
+    document.getElementById('velo-nota').classList.remove('visible');
+    renderHistorial();
+    toast('Nota borrada.');
+  });
+  document.getElementById('nota-guardar').addEventListener('click', function(){
+    var texto = document.getElementById('nota-texto').value.trim();
+    var desde = document.getElementById('nota-desde').value;
+    var hasta = document.getElementById('nota-hasta').value;
+    if (!texto){ toast('Escribe la explicaci\u00f3n de la nota.'); return; }
+    if (!desde || !hasta){ toast('Elige las fechas de la nota.'); return; }
+    if (hasta < desde){ var tmp = desde; desde = hasta; hasta = tmp; }
+    if (notaEditandoId){
+      var n = estado.notas.find(function(x){ return x.id === notaEditandoId; });
+      if (n){ n.texto = texto; n.desde = desde; n.hasta = hasta; }
+    } else {
+      estado.notas.push({ id: uid(), texto: texto, desde: desde, hasta: hasta });
+    }
+    guardar();
+    document.getElementById('velo-nota').classList.remove('visible');
+    renderHistorial();
   });
 
   // Tocar un día en la intensidad abre el mismo detalle (y lo acerca)
