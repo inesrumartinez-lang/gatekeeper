@@ -443,11 +443,12 @@
     let heroVisible = false;
 
     const showLine = (i) => { if (lines[i]) lines[i].classList.add('is-on'); };
+    const END = 358; /* 365 días desde el reconocimiento, contados 7 días después */
     const finalState = () => {
       run++;
       playing = false;
       dialEl.classList.remove('is-renew');
-      dial.set(365, 'Vigente');
+      dial.set(END, 'Vigente');
       lines.forEach((l) => l.classList.add('is-on'));
       replay.removeAttribute('aria-disabled');
     };
@@ -480,14 +481,14 @@
       if (!await leg(28, 25, 180, easeOut, 'Recordatorio enviado', null, 'Recordatorio enviado')) return;
       if (!await leg(25, 24, 160, easeOut, 'Recordatorio enviado', 4, 'Asistencia confirmada')) return;
       if (!await leg(24, 17, 260, easeOut, 'Asistencia confirmada', 5, 'Certificado recibido')) return;
-      /* Vuelta a 365: el color pasa a «vigente» sin transiciones intermedias */
+      /* Nuevo ciclo: el color pasa a «vigente» sin transiciones intermedias */
       dialEl.classList.add('is-renew');
       void dialEl.offsetWidth;
       dialEl.classList.add('dial--flash');
-      await tween(17, 365, 850, easeOut, (v) => dial.set(v, v > 300 ? 'Vigente' : 'Certificado recibido'), cancelled);
+      await tween(17, END, 850, easeOut, (v) => dial.set(v, v > 300 ? 'Vigente' : 'Certificado recibido'), cancelled);
       if (cancelled()) return;
       playing = false;
-      dial.set(365, 'Vigente');
+      dial.set(END, 'Vigente');
       replay.removeAttribute('aria-disabled');
     }
 
@@ -964,6 +965,7 @@
       if (!CONFIG.endpoint) submit.setAttribute('aria-describedby', mailHint.id);
     }
     let attempted = false;
+    let sending = false;
     let lastRequest = '';
 
     const rules = {
@@ -1111,8 +1113,10 @@
         attempted = false;
         return;
       }
+      if (sending) return;
+      sending = true;
       submit.setAttribute('aria-busy', 'true');
-      submit.disabled = true;
+      submit.setAttribute('aria-disabled', 'true');
       submitLabel.textContent = 'Enviando…';
       const controller = window.AbortController ? new AbortController() : null;
       const timer = controller ? window.setTimeout(() => controller.abort(), CONFIG.timeout) : 0;
@@ -1137,8 +1141,9 @@
         statusEl.textContent = `No hemos podido enviar tu solicitud. Inténtalo de nuevo o escríbenos a ${CONFIG.email}.`;
       } finally {
         window.clearTimeout(timer);
+        sending = false;
         submit.removeAttribute('aria-busy');
-        submit.disabled = false;
+        submit.removeAttribute('aria-disabled');
         submitLabel.textContent = idleLabel;
       }
     });

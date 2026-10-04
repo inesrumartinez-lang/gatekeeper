@@ -1,11 +1,11 @@
 # Web de Seniar · gestión externalizada de reconocimientos médicos
 
-Web estática (HTML, CSS y JavaScript sin dependencias). Se puede publicar tal cual en Netlify, Cloudflare Pages, Vercel o GitHub Pages.
+Web estática (HTML, CSS y JavaScript sin dependencias). Lo que se publica es la carpeta `public/`: en Netlify es el «Publish directory»; en Cloudflare Pages, el «Build output directory»; en Vercel, el «Output Directory». Este README queda fuera para que no se sirva con la web. Salvo que se diga otra cosa, las rutas de este documento son relativas a `public/`.
 
 ## Ver la web en local
 
 ```bash
-cd web-reconocimientos
+cd web-reconocimientos/public
 python3 -m http.server 8080
 # abre http://localhost:8080
 ```
@@ -62,16 +62,18 @@ Las fuentes se sirven con caché de un año (`immutable`) porque llevan la versi
 ## Estructura
 
 ```
-index.html            Página principal
-aviso-legal.html      Aviso legal (LSSI-CE)
-privacidad.html       Política de privacidad (RGPD y LOPDGDD)
-cookies.html          Política de cookies (la web no usa cookies)
-404.html              Página de error (rutas absolutas: pensada para la raíz del dominio)
-assets/css/main.css   Estilos y sistema de diseño
-assets/js/main.js     Animaciones e interacciones
-assets/fonts/         Seniar Sans y Seniar Mono (adaptaciones de Mona Sans y Geist Mono, licencia SIL OFL)
-assets/img/           Iconos e imagen para redes sociales
-favicon.ico, robots.txt, sitemap.xml, site.webmanifest, _headers
+README.md                    Este documento (no se publica)
+public/                      Carpeta que se publica
+  index.html                 Página principal
+  aviso-legal.html           Aviso legal (LSSI-CE)
+  privacidad.html            Política de privacidad (RGPD y LOPDGDD)
+  cookies.html               Política de cookies (la web no usa cookies)
+  404.html                   Página de error (rutas absolutas: pensada para la raíz del dominio)
+  assets/css/main.css        Estilos y sistema de diseño
+  assets/js/main.js          Animaciones e interacciones
+  assets/fonts/              Seniar Sans y Seniar Mono (adaptaciones de Mona Sans y Geist Mono, licencia SIL OFL)
+  assets/img/                Iconos e imagen para redes sociales
+  favicon.ico, robots.txt, sitemap.xml, site.webmanifest, _headers
 ```
 
 ## Notas

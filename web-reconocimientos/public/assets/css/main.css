@@ -1863,7 +1863,7 @@ tr[data-state="late"] .days__bar::after { background: var(--red); }
   .sheet__table thead th:first-child::before { left: 10px; }
 }
 .sheet__compact { display: none; }
-@media (max-width: 999px) {
+@media (max-width: 1179px) {
   .sheet__compact { display: inline; }
 }
 .sheet__note {
@@ -2210,7 +2210,7 @@ tr[data-state="late"] .days__bar::after { background: var(--red); }
   background: var(--rule);
 }
 .calc__out > div { padding: 16px 18px; background: var(--night-2); display: grid; gap: 8px; align-content: space-between; min-width: 0; }
-.calc__out dt { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-2); line-height: 1.4; overflow-wrap: break-word; }
+.calc__out dt { text-wrap: balance; font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-2); line-height: 1.4; overflow-wrap: break-word; }
 .calc__out dd { font-size: clamp(1.625rem, 1.3rem + 1vw, 2.125rem); font-weight: 400; font-stretch: 120%; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
 @media (max-width: 479px) {
   .calc__out { grid-template-columns: minmax(0, 1fr); }
@@ -2453,6 +2453,10 @@ tr[data-state="late"] .days__bar::after { background: var(--red); }
   .btn--lg { --h: 54px; gap: 10px; padding: 0 20px; font-size: 1rem; }
 }
 @media (forced-colors: active) {
+  .filter[aria-pressed="true"], .confirm__btn[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; border-color: Highlight; color: HighlightText; }
+  .qa__icon, .qa[open] .qa__icon { forced-color-adjust: none; background: Canvas; border-color: CanvasText; color: CanvasText; }
+  .qa__icon::before, .qa__icon::after { background: CanvasText; }
+  .calc__range { -webkit-appearance: auto; appearance: auto; }
   .menu-btn__icon { forced-color-adjust: none; background: ButtonText; }
   .menu-btn__icon i { background: ButtonFace; }
   .panel__dots button[aria-current="step"] span { forced-color-adjust: none; background: Highlight; border-color: Highlight; color: HighlightText; }
@@ -2695,6 +2699,18 @@ tr[data-state="late"] .days__bar::after { background: var(--red); }
    Impresión
    -------------------------------------------------------------------------- */
 @media print {
+  [data-tone="night"] {
+    --bg: #FFFFFF; --bg-2: var(--paper-2); --bg-3: var(--paper-3);
+    --fg: var(--ink); --fg-2: var(--ink-2); --fg-3: var(--ink-3);
+    --rule: rgb(12 28 24 / 0.13); --rule-strong: rgb(12 28 24 / 0.3);
+    --accent: var(--green); --accent-ink: #FFFFFF; --surface: #FFFFFF;
+    --chip-ok-bg: var(--ok-soft); --chip-ok-fg: var(--ok-ink);
+    --chip-warn-bg: var(--amber-soft); --chip-warn-fg: var(--amber-ink);
+    --chip-late-bg: var(--red-soft); --chip-late-fg: var(--red-ink);
+    --state-ok: var(--green); --state-warn: var(--amber); --state-late: var(--red);
+    color: var(--ink);
+  }
+  .night-bg, .cell[data-tone="night"], .cell.cell--cta, .calc, .panel { background: #FFFFFF !important; }
   .site-header, .menu, .skip-link, .ticker, .replay, .panel__dots, .footer__mega, .cta-band .btn { display: none !important; }
   body { background: #FFFFFF; }
   .js [data-reveal], .js [data-split], .js .readout li, .split-line > span, .js [data-anim] * { opacity: 1 !important; transform: none !important; }
