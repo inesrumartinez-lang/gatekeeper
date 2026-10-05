@@ -1,0 +1,21 @@
+# Cabeceras para Netlify o Cloudflare Pages (en otros alojamientos, configúralas igual).
+# Si cambias el script en línea del <head> de index.html, recalcula su hash (ver README).
+# Cache-Control solo se fija en los recursos inmutables: si dos reglas lo definieran para la
+# misma ruta, Cloudflare Pages uniría ambos valores con una coma. El resto usa el valor por
+# defecto del alojamiento (public, max-age=0, must-revalidate).
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Strict-Transport-Security: max-age=31536000
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-H9B5DBrznFWRYZePLIjNEBVoJ73pVmf3SIfslgjeCJA='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self' mailto:; base-uri 'self'; object-src 'none'; frame-ancestors 'none'
+
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/img/*
+  Cache-Control: public, max-age=604800
+
+/favicon.ico
+  Cache-Control: public, max-age=604800
